@@ -2,7 +2,7 @@
 #include<string.h>
 /*from MediocreKonjac*/
 #define CHESS unsigned long long
-#define MAXLIST 20
+#define MAXLIST 1000010
 #define INFINITY 0x3f3f3f3f
 /*suppose the chessboard looks like
 						7
@@ -32,8 +32,9 @@ const CHESS kCutDoubleColumn[2] = { 0xfcfcfcfcfcfcfcfc,0x3f3f3f3f3f3f3f3f };
 const CHESS kKingRow = 0xff000000000000ff;
 const CHESS kAllChessBoard = 0xffffffffffffffff;
 
-
-
+/*global variables*/
+CHESS list[MAXLIST][3]; 
+int index;
 
 /*generate a specific direction bitboard move or jump*/
 
@@ -62,7 +63,7 @@ inline void print(CHESS state)
 	{
 		for (int j = 0; j < 7; j++)
 		{
-			printf("%d", state&(1 << (8 * (7 - i) + 7 - j)) ? 1 : 0);
+			printf("%d", (state&(1 << (CHESS) (8 * (7 - i) + 7 - j))) ? 1 : 0);
 		}
 		printf("\n");
 	}
@@ -110,9 +111,8 @@ inline void OneDirectionJump(const CHESS enemy,const CHESS state,const CHESS bri
 		QueuePush(state ^ (location | Jump(location, horizontal, vertical)), bridge | Move(location, horizontal, vertical), Jump(location, horizontal, vertical),number+1);
 	}
 }
-inline int  FindPossibleJump(CHESS list[][3],const CHESS chessboard[],const int side)
+inline int  FindPossibleJump(const CHESS chessboard[],const int side)
 {
-	int index = 0;
 	CHESS state = chessboard[side];
 	CHESS bridge, location, number;
 	QueueReset();
@@ -149,7 +149,7 @@ inline int  FindPossibleJump(CHESS list[][3],const CHESS chessboard[],const int 
 0 means white,1 means black
 0 means step right, 1 means step left
 0 means step back, 1 means step forward*/
-inline void OneDirectionMove(int *index,CHESS list[][3],const CHESS chessboard[], const int side,const int horizontal)
+inline void OneDirectionMove(const CHESS chessboard[], const int side,const int horizontal)
 {
 	CHESS move= ((Move(chessboard[side], horizontal, side ^ 1)&kCutColumn[horizontal^1])&(~chessboard[side ^ 1]))&kAllChessBoard;
 	while (move)
@@ -159,13 +159,13 @@ inline void OneDirectionMove(int *index,CHESS list[][3],const CHESS chessboard[]
 		position = position ^ (position >> 1);
 		move = move ^ position;
 		position = position | Move(position, horizontal^1, side);
-		(*index)++;
-		list[*index][side] = chessboard[side] ^ position;
-		list[*index][side ^ 1] = chessboard[side ^ 1];
-		list[*index][2] = (chessboard[2] & position) ? chessboard[2] ^ position : chessboard[2];
+		index++;
+		list[index][side] = chessboard[side] ^ position;
+		list[index][side ^ 1] = chessboard[side ^ 1];
+		list[index][2] = (chessboard[2] & position) ? chessboard[2] ^ position : chessboard[2];
 	}
 }
-inline void KingExtralMove(int *index, CHESS list[][3], const CHESS chessboard[], const int side, const int horizontal)
+inline void KingExtralMove(const CHESS chessboard[], const int side, const int horizontal)
 {
 	CHESS move = ((Move(chessboard[side]&chessboard[2], horizontal, side)&kCutColumn[horizontal ^ 1])&(~chessboard[side ^ 1]))&kAllChessBoard;
 	while (move)
@@ -175,46 +175,57 @@ inline void KingExtralMove(int *index, CHESS list[][3], const CHESS chessboard[]
 		position = position ^ (position >> 1);
 		move = move ^ position;
 		position = position | Move(position, horizontal ^ 1, side^1);
-		(*index)++;
-		list[*index][side] = chessboard[side] ^ position;
-		list[*index][side ^ 1] = chessboard[side ^ 1];
-		list[*index][2] =chessboard[2] ^ position;
+		index++;
+		list[index][side] = chessboard[side] ^ position;
+		list[index][side ^ 1] = chessboard[side ^ 1];
+		list[index][2] =chessboard[2] ^ position;
 	}
 }
-inline int FindPossibleMove(CHESS list[][3],const CHESS chessboard[],const int side)
+inline int FindPossibleMove(const CHESS chessboard[],const int side)
 {
-	int index = 0;
-	OneDirectionMove(&index, list, chessboard, side, 1);
-	OneDirectionMove(&index, list, chessboard, side, 0);
-	KingExtralMove(&index, list, chessboard, side, 1);
-	KingExtralMove(&index, list, chessboard, side, 0);
+	OneDirectionMove(chessboard, side, 1);
+	OneDirectionMove(chessboard, side, 0);
+	KingExtralMove(chessboard, side, 1);
+	KingExtralMove(chessboard, side, 0);
 	return index;
 }
 
 /*********PART 3 SEARCH**************/
 
 /*search*/
-
+/*CHESS data*/
 CHESS output[2];
 inline int Evaluate(const CHESS chessboard[])
 {
+	/*so how do we evaluate the state*/
+	/*this is really a hard question*/
 	
+	return 0;
+}
+
+
+inline int CheckOut(CHESS chessboard)
+{
+
+
 	return 0;
 }
 int AlphaBeta(const int depth, int alpha, int beta,const CHESS chessboard[],const int side)
 {
+	/*check out whether it is a searched statement*/
 	if (depth == 0) {
 		return Evaluate(chessboard);
 	}
-	CHESS list[MAXLIST][3];
-	int index = 0;
-	if (!(index=FindPossibleJump(list, chessboard, side)))
+	int start=index;
+	if (start==FindPossibleJump(chessboard, side))
 	{
-		index=FindPossibleMove(list, chessboard, side);
+		FindPossibleMove(chessboard, side);
 	}
-	while (index--) 
+	
+	/*from start+1 to index,we should sort the number*/
+	for(int i=start+1;i<=index;i++)
 	{
-		int value = -AlphaBeta(depth - 1, -beta, -alpha,list[index],side^1);
+		int value = -AlphaBeta(depth - 1, -beta, -alpha,list[i],side^1);
 		if (value >= beta) 
 		{
 			return beta;
@@ -222,10 +233,11 @@ int AlphaBeta(const int depth, int alpha, int beta,const CHESS chessboard[],cons
 		if (value > alpha)
 		{
 			alpha = value;
-			output[side] = list[index][side];
-			output[side ^ 1] = list[index][side ^ 1];
+			output[side] = list[i][side];
+			output[side ^ 1] = list[i][side ^ 1];
 		}
 	}
+	/*save this state for future statement?*/
 	return alpha;
 }
 
