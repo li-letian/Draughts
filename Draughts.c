@@ -32,10 +32,6 @@ const CHESS kCutDoubleColumn[2] = { 0xfcfcfcfcfcfcfcfc,0x3f3f3f3f3f3f3f3f };
 const CHESS kKingRow = 0xff000000000000ff;
 const CHESS kAllChessBoard = 0xffffffffffffffff;
 
-/*global variables*/
-CHESS list[MAXLIST][3]; 
-int index;
-
 /*generate a specific direction bitboard move or jump*/
 
 /*suppose
@@ -51,6 +47,15 @@ inline CHESS Move(const CHESS chessboard,const int horizontal,const int vertical
 inline CHESS Jump(const CHESS chessboard,const  int horizontal,const int vertical)
 {
 	return (vertical) ? (chessboard << (horizontal ? 18 : 14))&kAllChessBoard : (chessboard >> (horizontal ? 14 : 18))&kAllChessBoard;
+}
+inline int Count(CHESS chessboard)
+{
+	chessboard = ((chessboard >> 1) & 0x5555555555555555) + (chessboard & 0x5555555555555555);
+	chessboard = ((chessboard >> 2) & 0x3333333333333333) + (chessboard & 0x3333333333333333);
+	chessboard = ((chessboard >> 4) & 0x0f0f0f0f0f0f0f0f) + (chessboard & 0x0f0f0f0f0f0f0f0f);
+	chessboard = ((chessboard >> 8) & 0x00ff00ff00ff00ff) + (chessboard & 0x00ff00ff00ff00ff);
+	chessboard = ((chessboard >> 16) & 0x0000ffff0000ffff) + (chessboard & 0x0000ffff0000ffff);
+	return ((chessboard >> 32) + (chessboard & 0x00000000ffffffff));
 }
 
 
@@ -80,58 +85,61 @@ queue[i][1]saves chessboard of beaten enemy
 queue[i][2]saves chessboard of present extending location
 queue[i][3]saves numbers of the beaten enemy
 */
-CHESS queue[150][4];
+
+/*global variables*/
+CHESS list[MAXLIST][3];
+int index;
+CHESS queue[150][3];
 int head = 1, tail = 0;
 inline void QueueReset()
 { 
 	head = 1; 
 	tail = 0; 
 }
-inline void QueuePush(const CHESS state,const CHESS bridge,const CHESS location,const CHESS number)
+inline void QueuePush(const CHESS state,const CHESS bridge,const CHESS location)
 {
 	++tail;
 	queue[tail][0] = state;
 	queue[tail][1] = bridge;
 	queue[tail][2] = location;
-	queue[tail][3] = number;
 }
-inline void QueuePop(CHESS *state, CHESS *bridge, CHESS *location,CHESS *number)
+inline void QueuePop(CHESS *state, CHESS *bridge, CHESS *location)
 {
 	(*state) = queue[head][0];
 	(*bridge) = queue[head][1];
 	(*location) = queue[head][2];
-	(*number) = queue[head][3];
 	head++;
 }
-inline void OneDirectionJump(const CHESS enemy,const CHESS state,const CHESS bridge,const CHESS location,CHESS number,const int horizontal,const int vertical)
+inline void OneDirectionJump(const CHESS enemy,const CHESS state,const CHESS bridge,const CHESS location,const int horizontal,const int vertical)
 {
 	if(((Move(location,horizontal,vertical)&kCutColumn[horizontal^1])&(enemy^bridge))
 		&((Jump(location, horizontal, vertical)&kCutDoubleColumn[horizontal ^ 1])&(~(state | enemy))))
 	{
-		QueuePush(state ^ (location | Jump(location, horizontal, vertical)), bridge | Move(location, horizontal, vertical), Jump(location, horizontal, vertical),number+1);
+		QueuePush(state ^ (location | Jump(location, horizontal, vertical)), bridge | Move(location, horizontal, vertical), Jump(location, horizontal, vertical));
 	}
 }
 inline int  FindPossibleJump(const CHESS chessboard[],const int side)
 {
+	int start = index;
 	CHESS state = chessboard[side];
-	CHESS bridge, location, number;
+	CHESS bridge=0, location=0;
 	QueueReset();
 	while (state)
 	{
-		CHESS position = state ^ (state - 1);
-		position = position ^ (position >> 1);
-		QueuePush(state, 0, position,0);
+		CHESS position = state & ((~state) + 1);
+		state = state ^ position;
+		QueuePush(state, 0, position);
 	}
 	while (head <= tail)
 	{
-		QueuePop(&state, &bridge, &location,&number);
-		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, number, 1, 1);
-		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, number, 0, 1);
-		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, number, 1, 0);
-		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, number, 0, 0);
+		QueuePop(&state, &bridge, &location);
+		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, 1, 1);
+		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, 0, 1);
+		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, 1, 0);
+		OneDirectionJump(chessboard[side ^ 1], state, bridge, location, 0, 0);
 	}
-	if (!queue[tail][3]) return 0;
-	while (queue[--head][3] == queue[tail][3]);
+	if (!queue[tail][1]) return 0;
+	while (Count(queue[--head][1]) ==Count(queue[tail][1]));
 	while ((++head) <= tail)
 	{
 		index++;
@@ -140,7 +148,7 @@ inline int  FindPossibleJump(const CHESS chessboard[],const int side)
 		list[index][2] = chessboard[2] ^ (chessboard[2] & queue[head][1]);
 		list[index][2] = list[index][2] & (chessboard[side] ^ queue[head][0]) ? list[index][2] ^ (chessboard[side] ^ queue[head][0]) : list[index][2];
 	}
-	return index;
+	return index-start;
 }
 
 /*possible single move*/
@@ -154,9 +162,7 @@ inline void OneDirectionMove(const CHESS chessboard[], const int side,const int 
 	CHESS move= ((Move(chessboard[side], horizontal, side ^ 1)&kCutColumn[horizontal^1])&(~chessboard[side ^ 1]))&kAllChessBoard;
 	while (move)
 	{
-		CHESS position;
-		position = move ^ (move - 1);
-		position = position ^ (position >> 1);
+		CHESS position = move & ((~move) + 1);
 		move = move ^ position;
 		position = position | Move(position, horizontal^1, side);
 		index++;
@@ -183,11 +189,12 @@ inline void KingExtralMove(const CHESS chessboard[], const int side, const int h
 }
 inline int FindPossibleMove(const CHESS chessboard[],const int side)
 {
+	int start = index;
 	OneDirectionMove(chessboard, side, 1);
 	OneDirectionMove(chessboard, side, 0);
 	KingExtralMove(chessboard, side, 1);
 	KingExtralMove(chessboard, side, 0);
-	return index;
+	return index-start;
 }
 
 /*********PART 3 SEARCH**************/
@@ -198,7 +205,7 @@ CHESS output[2];
 inline int Evaluate(const CHESS chessboard[])
 {
 	/*so how do we evaluate the state*/
-	/*this is really a hard question*/
+	/*this is such a really hard question*/
 	
 	return 0;
 }
@@ -217,11 +224,10 @@ int AlphaBeta(const int depth, int alpha, int beta,const CHESS chessboard[],cons
 		return Evaluate(chessboard);
 	}
 	int start=index;
-	if (start==FindPossibleJump(chessboard, side))
+	if ((! FindPossibleJump(chessboard, side)) && (! FindPossibleMove(chessboard, side)))
 	{
-		FindPossibleMove(chessboard, side);
+		//no ways to go ,this side has lost,you can just return a value of total win or total lost
 	}
-	
 	/*from start+1 to index,we should sort the number*/
 	for(int i=start+1;i<=index;i++)
 	{
