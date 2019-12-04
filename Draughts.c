@@ -1,13 +1,15 @@
 #include<stdio.h>
 //#include<string.h>
 //#include<time.h>
-//#include<windows.h>
+#include<windows.h>
+
+#define DEBUG 1
+
 typedef unsigned int CHESS;
 #define MAXLS 10000010
 #define INFINITY 0x3f3f3f3f
 #define MOD 1226959
 #define MAXHS 11
-#define DEBUG print();
 /*about the type*/
 #define WHITE 0
 #define BLACK 1
@@ -21,6 +23,8 @@ typedef unsigned int CHESS;
 #define MINE 0
 #define ENEMY 1
 /*
+suppose my chessboard looks like this 
+it is just a reverse of the required key board
 						7
 						6
 						5
@@ -62,12 +66,18 @@ and the bit goes like
 */
 /**********PART 1 PREWORK*************/
 /*constant*/
-
+const int kEvaluateNumber = 10;
+const int kEvaluatePosition = 7;
+const int kEvaluateType = 5;
 const CHESS kCutMove[2][2] = { {0xefefefe0,0x0fefefef},{0xf7f7f7f0,0x07f7f7f7} };
 const CHESS kCutJump[2][2] = { {0xeeeeee00,0x00eeeeee}, {0x77777700,0x00777777} };
-const CHESS kKing = 0xf000000f;
+const CHESS kKing[2] = { 0xf0000000,0x0000000f };
 const CHESS kEven = 0x0f0f0f0f;
 const CHESS kChessBoard = 0xffffffff;
+int my_side;
+const long long time_limit=800;
+long long clock_start;
+long long clock_end;
 /*generate a specific direction bitboard move or jump*/
 /*
 suppose
@@ -102,22 +112,23 @@ inline int Count(CHESS chessboard) {
 
 
 /*****************DEBUG************/
-inline void print(CHESS state)
+inline void print(const CHESS chessboard[])
 {
-	printf("\n****************");
+	printf("\n****************\n");
 	fflush(stdout);
 	for (int j = 0; j < 8; j++)
 	{
 		for (int i = 0; i < 4; i++)
 		{
-			if (i != 3&&(j&1))
+			if (!(j&1))
 			{
 				printf("0");
 				fflush(stdout);
 			}
-			printf("%d", (state&(1 << (CHESS) (4 * (7-j) + 3-i ))) ? 1 : 0);
+			printf("%d", (chessboard[1]&(1 << (CHESS) (4 * (7-j) + 3-i ))) ? 2:
+				((chessboard[0]& (1 << (CHESS)(4 * (7 - j) + 3 - i)))? 1 :0));
 			fflush(stdout);
-			if (i != 3&&!(j&1))
+			if ((j&1))
 			{
 				printf("0");
 				fflush(stdout);
@@ -160,7 +171,7 @@ typedef struct Hashlist
 }HASH;
 HASH hash[2][MOD][10];
 int total[2][MOD];
-inline int Hash(CHESS chessboard[])
+inline int Hash(const CHESS chessboard[])
 {
 	return ((chessboard[WHITE] >> 3) ^ chessboard[KING] ^ (chessboard[BLACK] << 1)) % MOD;
 }
@@ -180,7 +191,7 @@ HASH * HashFind(const CHESS chessboard[],int side)
 	}
 	return NULL;
 }
-HASH *HashPush(CHESS chessboard[], int start, int end,int side)
+HASH *HashPush(const CHESS chessboard[], int start, int end,int side)
 {
 	int pos = Hash(chessboard);
 	total[side][pos]++;
@@ -274,6 +285,7 @@ inline int  FindPossibleJump(const CHESS chessboard[],const int side)
 		list[index].method[side ^ 1] = chessboard[side^1]^queue[head][ENEMY];
 		list[index].method[KING] = chessboard[KING] ^ (chessboard[KING] & queue[head][ENEMY]);
 		list[index].method[KING] = list[index].method[KING] & (chessboard[side] ^ queue[head][MINE]) ? list[index].method[KING] ^ (chessboard[side] ^ queue[head][MINE]) : list[index].method[KING];
+		list[index].method[KING] |= queue[head][MINE] & kKing[side];
 	}
 	return index-start;
 }
@@ -293,7 +305,9 @@ inline void OneDirectionMove(const CHESS chessboard[], const CHESS position, con
 	list[index].method[side] = chessboard[side] ^ move;
 	list[index].method[side ^ 1] = chessboard[side ^ 1];
 	list[index].method[KING] = (chessboard[KING] & position) ? chessboard[KING] ^ move : chessboard[KING];
-}
+	list[index].method[KING] |= list[index].method[side] & kKing[side];
+}/*debug finished*/
+
 inline int FindPossibleMove(const CHESS chessboard[],const int side)
 {
 	int start = index;
@@ -314,35 +328,28 @@ inline int FindPossibleMove(const CHESS chessboard[],const int side)
 		generate ^= position;
 	}
 	return index-start;
-}
+}/*debug finidhed*/
 
 /*********PART 3 SEARCH**************/
 
 /*search*/
 /*CHESS data*/
-CHESS output[2];
+CHESS output[3];
 inline int Evaluate(const CHESS chessboard[])
 {
 	/*so how do we evaluate the state*/
 	/*this is such a really hard question*/
-	
-
-
-
-
-	return 0;
+	int positive = 0, negative = 0;
+	positive += Count(chessboard[my_side]) << kEvaluateNumber;
+	negative += Count(chessboard[my_side ^ 1]) << kEvaluateNumber;
+	if (!negative) return INFINITY;
+	if (!positive) return -INFINITY;
+	positive += Count(chessboard[my_side] & chessboard[2]) << kEvaluateType;
+	negative += Count(chessboard[my_side ^ 1] & chessboard[2]) << kEvaluateType;
+	return positive-negative;
 }
 
-
-inline int CheckOut(CHESS chessboard)
-{
-
-
-	return 0;
-}
-
-
-void ListSort(int start, int end,int side)
+void Sort(int start, int end)
 {
 	int i = start;
 	int j = end;
@@ -359,8 +366,8 @@ void ListSort(int start, int end,int side)
 			i++; j--;
 		}
 	}
-	if (start < j)  ListSort(start, j, side);
-	if (i < end)  ListSort(i, end, side);
+	if (start < j)  Sort(start, j);
+	if (i < end)  Sort(i, end);
 }
 
 
@@ -383,7 +390,7 @@ int AlphaBeta(const int depth, int alpha, int beta,const CHESS chessboard[],cons
 			{
 				list[i].value = Evaluate(list[i].method);
 			}
-			sort(node->start, node->end);
+			Sort(node->start, node->end);
 		}
 		else
 		{
@@ -398,17 +405,21 @@ int AlphaBeta(const int depth, int alpha, int beta,const CHESS chessboard[],cons
 		list[pos].value = value;
 		if (value >= beta) 
 		{
-			sort(node->start + 1, i);
+			Sort(node->start, i);
 			return beta;
 		}
 		if (value > alpha)
 		{
 			alpha = value;
-			output[side] = list[key[i]].method[side];
-			output[side ^ 1] = list[key[i]].method[side ^ 1];
+			if (depth == 1)
+			{
+				output[side] = list[pos].method[side];
+				output[side ^ 1] = list[pos].method[side ^ 1];
+				output[2] = list[pos].method[2];
+			}
 		}
 	}
-	sort(node->start+1,)
+	Sort(node->start,node->end );
 	return alpha;
 }
 
@@ -416,7 +427,7 @@ inline int Transform(CHESS state)
 {
 	int temp = 0;
 	while (!(state&(1 << temp))) temp++;
-	return (temp<<1) + (((temp >> 2) & 1) ^ 1);
+	return (temp<<1) + !(((temp >> 2) & 1));
 }
 
 int path[50];
@@ -466,15 +477,24 @@ inline void Print(CHESS chessboard[],int side)
 
 
 /**********PART 4 STDIN/STDOUT**************/
-void Search(CHESS chessboard[],const int side)
+void Search(CHESS chessboard[], const int side)
 {
-	AlphaBeta(6, -INFINITY, INFINITY, chessboard, side);
-	chessboard[2] |= chessboard[side] & kKing;
+	int depth = 3;
+	clock_end = GetTickCount();
+	//while ((long long )(clock_end) -(long long) clock_start <= (long long)time_limit)
+	{
+		AlphaBeta(depth, -INFINITY, INFINITY, chessboard, side);
+		depth+=2;
+		clock_end = clock();
+	}
 	Print(chessboard, side);
+	chessboard[0] = output[0];
+	chessboard[1] = output[1];
+	chessboard[2] = output[2];
 	return;
 }
 
-inline CHESS Locate(int x, int y)
+inline CHESS Locate(const int x,const int y)
 {
 	return (1<< ((y << 2) | (x >> 1)));
 }
@@ -484,15 +504,20 @@ void Work(int side)
 	/*chessboard[0]means white */
 	/*chessboard[1]means black*/
 	/*chessboard[2]means king*/
-	CHESS chessboard[3];
+	CHESS chessboard[3] = { 0x00000fff,0xfff00000,0 };
 	printf("OK\n");
 	char order[10];
 	while (1)
 	{
 		scanf("%s", order);/*recieve a order*/
+		clock_start = GetTickCount();
 		if (order[0] == 'T')
 		{
 			Search(chessboard,side);
+			if (DEBUG)
+			{
+				print(chessboard);
+			}
 			continue;
 		}
 		if (order[0] == 'P')
@@ -507,17 +532,21 @@ void Work(int side)
 			CHESS start = Locate(x[1], y[1]);
 			CHESS end = Locate(x[2], y[2]);
 			chessboard[side ^ 1] ^= start | end;
-			chessboard[2] = start&chessboard[2] ? (chessboard[2] ^ (start | end)) : chessboard[2];
-			chessboard[2] |= end&kKing;
-			if ((x[1] - x[2])*(x[1] - x[2])*(y[1] - x[2])*(y[1] - x[2]) != 1)
+			chessboard[KING] = start&chessboard[KING] ? (chessboard[KING] ^ (start | end)) : chessboard[KING];
+			chessboard[KING] |= end&kKing[side^1];
+			if ((x[1] - x[2])*(x[1] - x[2])*(y[1] - y[2])*(y[1] - y[2]) != 1)
 			{
 				for (int i = 2; i <= number; i++)
 				{
 					int col = (y[i] + y[i - 1]) >> 1;
 					int row = (x[i] + x[i - 1]) >> 1;
 					chessboard[side] ^= Locate(row, col);
-					chessboard[2] ^= chessboard[2] & Locate(row, col);
+					chessboard[KING] ^= chessboard[KING] & Locate(row, col);
 				}
+			}
+			if (DEBUG)
+			{
+				print(chessboard);
 			}
 			continue;
 		}
@@ -531,7 +560,6 @@ void Work(int side)
 
 int main()
 {
-	int my_side;
 	scanf("START %d", &my_side);
 	Work(my_side);
 	return 0;
