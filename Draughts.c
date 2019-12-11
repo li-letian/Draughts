@@ -4,7 +4,7 @@
 #define DEBUG 0
 /***********PART 0 DEFINATION*********/
 /*about the size*/
-#define MAXSIZE 10000010
+#define MAXSIZE 9000010
 /*each turn contributes to 1 200 000 moehod and 280 000 node*/
 /*each turn makes about 17 depth search*/
 /*that is for about 1500 seconds*/
@@ -72,9 +72,7 @@ and the bit goes like
 ...........4
 3 2 1 0
 */
-
 /*****************PART 0.5 DEBUG************/
-
 inline void debug(const CHESS chessboard[])
 {
 	printf("\n****************\n");
@@ -98,35 +96,46 @@ inline void debug(const CHESS chessboard[])
 			}
 		}
 		printf(" %d", 7 - j);
+		fflush(stdout);
 		if (j == 7) printf("X");
+		fflush(stdout);
 		printf("\n");
+		fflush(stdout);
 	}
 	printf("\n");
-	for (int i = 7; i >= 0; i--) printf("%d", i);
+	fflush(stdout);
+	for (int i = 7; i >= 0; i--)
+	{
+		printf("%d", i);
+		fflush(stdout);
+	}
 	printf("\n");
-	for (int i = 6; i >= 0; i--) printf(" ");
+	fflush(stdout);
+	for (int i = 6; i >= 0; i--)
+	{
+		printf(" ");
+		fflush(stdout);
+	}
 	printf("Y");
+	fflush(stdout);
 	printf("\n****************\n");
 	fflush(stdout);
 	printf("\n");
 	fflush(stdout);
 }
-
-
 /**********PART 1 PREWORK*************/
 /*constant*/
 const int kEvaluateNumber = 15;
 const int kEvaluateCorner = 4;
 const int kEvaluatePosition[2][8] = { {0,0,1,2,3,6,7,8},{8,7,6,3,2,1,0,0} };
 const int kEvaluateType = 16;
-const long long time_limit = 1989;
+const long long time_limit = 1700;
 const CHESS kCutMove[2][2] = { {0xefefefe0,0x0fefefef},{0xf7f7f7f0,0x07f7f7f7} };
 const CHESS kCutJump[2][2] = { {0xeeeeee00,0x00eeeeee}, {0x77777700,0x00777777} };
 const CHESS kKing[2] = { 0xf0000000,0x0000000f };
 const CHESS kRow[8] = { 0x0000000f,0x000000f0,0x00000f00,0x0000f000,0x000f0000,0x00f00000,0x0f000000,0xf0000000 };
 const CHESS kEven = 0x0f0f0f0f;
 const CHESS kEdge = 0x09999990;
-const CHESS kChessBoard = 0xffffffff;
 /*generate a specific direction bitboard move or jump
 suppose
 the value of horizontal:0 means step right, 1 means step left
@@ -150,14 +159,13 @@ inline CHESS Jump(const CHESS position, const  int horizontal, const int vertica
 		(position >> (7 + ((horizontal ^ 1) << 1)));
 }
 /*to count how many 1 in its  binary number*/
-inline int Count(CHESS chessboard) {
+inline int Count( CHESS chessboard) {
 	chessboard = ((chessboard >> 1) & 0x55555555) + (chessboard & 0x55555555);
 	chessboard = ((chessboard >> 2) & 0x33333333) + (chessboard & 0x33333333);
 	chessboard = ((chessboard >> 4) & 0x0f0f0f0f) + (chessboard & 0x0f0f0f0f);
 	chessboard = ((chessboard >> 8) & 0x00ff00ff) + (chessboard & 0x00ff00ff);
 	return (chessboard >> 16) + (chessboard & 0x0000ffff);
 }
-
 /*********PART 2 FIND WAYS TO GO**********/
 /*the list to save the moving method and its index
 for each side and chessboard statement
@@ -244,7 +252,7 @@ inline int  FindPossibleJump(const CHESS chessboard[], const int side)
 	}
 	return method_index - start;
 }
-inline void OneDirectionMove(const CHESS chessboard[], const CHESS position, const int side, const int horizontal, int vertical)
+inline void OneDirectionMove(const CHESS chessboard[], const CHESS position, const int side, const int horizontal, const int vertical)
 {
 	if (!(position&kCutMove[horizontal][vertical]))
 	{
@@ -281,8 +289,6 @@ inline int FindPossibleMove(const CHESS chessboard[], const int side)
 	}
 	return method_index - start;
 }/*debug finidhed*/
-
-
 /**********PART 3 INPUT AND OUTPUT**********/
 CHESS output[3];
 int my_side;
@@ -299,7 +305,7 @@ inline CHESS CoordinateToChess(const int x, const int y)
 {
 	return (1 << ((y << 2) | (x >> 1)));
 }
-inline void OneDirectionOutput(CHESS * position, CHESS *bridge, int horizontal, int vertical)
+inline void OneDirectionOutput(CHESS * position, CHESS *bridge, const int horizontal, const int vertical)
 {
 	if (!(((*position)&kCutMove[horizontal][vertical]) && ((*position)&kCutJump[horizontal][vertical])))
 	{
@@ -315,7 +321,7 @@ inline void OneDirectionOutput(CHESS * position, CHESS *bridge, int horizontal, 
 	}
 	return;
 }
-inline void Output(CHESS chessboard[], int side)
+inline void Output( const CHESS chessboard[], int side)
 {
 	int cnt = 2;
 	CHESS temp = chessboard[side] ^ output[side];
@@ -371,9 +377,7 @@ inline void Input(CHESS chessboard[])
 }
 
 /**********************PART 4 SEARCH******************/
-
-
-inline int Evaluate(const CHESS chessboard[], int side)
+inline int Evaluate( const CHESS chessboard[], const int side)
 {
 	int value = 0;
 	int mine = Count(chessboard[side]);
@@ -383,12 +387,12 @@ inline int Evaluate(const CHESS chessboard[], int side)
 	{
 		value += mine << kEvaluateNumber;
 		value += Count(chessboard[side] & kEdge) << kEvaluateCorner;
-		value += Count(chessboard[side] & chessboard[2]) << kEvaluateType;
+		value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
 	}
 	else if (number >= 5)
 	{
 		value += mine << kEvaluateNumber;
-		value += Count(chessboard[side] & chessboard[2]) << kEvaluateType;
+		value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
 		for (int i = 0; i < 8; i++)
 		{
 			value += Count(chessboard[side] & kRow[i]) << kEvaluatePosition[side][i];
@@ -397,7 +401,7 @@ inline int Evaluate(const CHESS chessboard[], int side)
 	else
 	{
 		value += mine << kEvaluateNumber;
-		value += (Count(chessboard[side] & chessboard[2])) << (kEvaluateType + 2);
+		value += (Count(chessboard[side] & chessboard[KING])) << (kEvaluateType + 2);
 	}
 	return value;
 }
@@ -457,7 +461,7 @@ inline int HashFind(const CHESS chessboard[], int side)
 	}
 	return 0;
 }
-inline int HashPush(const CHESS chessboard[], int start, int end, int side)
+inline int HashPush(const CHESS chessboard[], const int start, const int end, const int side)
 {
 	int pos = Hash(chessboard);
 	++hash_index;
@@ -473,7 +477,8 @@ inline int HashPush(const CHESS chessboard[], int start, int end, int side)
 }
 long long clock_start;
 long long clock_end;
-typedef struct Expect {
+typedef struct Expect
+{
 	int size;
 	CHESS chessboard[35][3];
 }EXPECT;
@@ -482,7 +487,11 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 	father->size = 0;
 	if (!chessboard[side]) return -INFINITY;
 	if (!chessboard[side ^ 1]) return INFINITY;
-	if (turn + depth >= 120) return Count(chessboard[side]) - Count(chessboard[side ^ 1]) + ((Count(chessboard[side] & chessboard[KING]) - Count(chessboard[side ^ 1] & chessboard[KING])) << 1);
+	if (turn + depth >= 120) 
+		return (Count(chessboard[side]) - Count(chessboard[side ^ 1]) 
+			+ ((Count(chessboard[side] & chessboard[KING]) 
+			- Count(chessboard[side ^ 1] & chessboard[KING])) << 1))
+			>0? INFINITY:-INFINITY;
 	if (depth == level)
 	{
 		return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
@@ -510,10 +519,6 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 		}
 		else/*nowhere to go you have lost*/
 		{
-			if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
-			{
-				time_out = 1;
-			}
 			return -INFINITY;
 		}
 	}
@@ -606,11 +611,11 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 			father->chessboard[0][WHITE]=method[pos].chessboard[WHITE];
 			father->chessboard[0][BLACK] = method[pos].chessboard[BLACK];
 			father->chessboard[0][KING] = method[pos].chessboard[KING];
-			for (int i = 0; i < expect.size; i++)
+			for (int j = 0; j < expect.size; j++)
 			{
-				father->chessboard[i+1][WHITE] = expect.chessboard[i][WHITE];
-				father->chessboard[i+1][BLACK] = expect.chessboard[i][BLACK];
-				father->chessboard[i+1][KING] = expect.chessboard[i][KING];
+				father->chessboard[j+1][WHITE] = expect.chessboard[j][WHITE];
+				father->chessboard[j+1][BLACK] = expect.chessboard[j][BLACK];
+				father->chessboard[j+1][KING] = expect.chessboard[j][KING];
 			}
 			if (!depth)
 			{
@@ -671,7 +676,10 @@ void Search(CHESS chessboard[], const int side)
 	for (depth = 1; (turn + depth <= 120) && !time_out; depth += 2)
 	{
 		EXPECT expect;
-		AlphaBeta(depth, 0, -INFINITY, INFINITY, chessboard, side,&expect);
+		if (INFINITY == AlphaBeta(depth, 0, -INFINITY, INFINITY, chessboard, side, &expect))
+		{
+			break;
+		}
 		if (DEBUG)
 		{
 			printf("level:%d expect:%d\n", depth, expect.size);
@@ -691,17 +699,13 @@ void Search(CHESS chessboard[], const int side)
 			}
 		}
 	}
-	if (DEBUG)
-	{
-		printf("level:%d\n", depth);
-	}
 	Output(chessboard, side);
 	chessboard[WHITE] = output[WHITE];
 	chessboard[BLACK] = output[BLACK];
 	chessboard[KING] = output[KING];
 	return;
 }
-void Work()
+void Work(void)
 {
 	CHESS chessboard[3] = { 0x00000fff,0xfff00000,0 };
 	printf("OK\n");
@@ -720,8 +724,11 @@ void Work()
 			{
 				debug(chessboard);
 				printf("time:%lld\n", clock_end - clock_start);
+				fflush(stdout);
 				printf("methodlist:%d\n", method_index);
+				fflush(stdout);
 				printf("hashlist:%d\n", hash_index);
+				fflush(stdout);
 			}
 			continue;
 		}
