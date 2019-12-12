@@ -4,7 +4,7 @@
 #define DEBUG 0
 /***********PART 0 DEFINATION*********/
 /*about the size*/
-#define MAXSIZE 9000010
+#define MAXSIZE 10000010
 /*each turn contributes to 1 200 000 moehod and 280 000 node*/
 /*each turn makes about 17 depth search*/
 /*that is for about 1500 seconds*/
@@ -129,7 +129,7 @@ const int kEvaluateNumber = 15;
 const int kEvaluateCorner = 4;
 const int kEvaluatePosition[2][8] = { {0,0,1,2,3,6,7,8},{8,7,6,3,2,1,0,0} };
 const int kEvaluateType = 16;
-const long long time_limit = 1700;
+const long long time_limit = 1800;
 const CHESS kCutMove[2][2] = { {0xefefefe0,0x0fefefef},{0xf7f7f7f0,0x07f7f7f7} };
 const CHESS kCutJump[2][2] = { {0xeeeeee00,0x00eeeeee}, {0x77777700,0x00777777} };
 const CHESS kKing[2] = { 0xf0000000,0x0000000f };
@@ -159,7 +159,7 @@ inline CHESS Jump(const CHESS position, const  int horizontal, const int vertica
 		(position >> (7 + ((horizontal ^ 1) << 1)));
 }
 /*to count how many 1 in its  binary number*/
-inline int Count( CHESS chessboard) {
+inline int Count(CHESS chessboard) {
 	chessboard = ((chessboard >> 1) & 0x55555555) + (chessboard & 0x55555555);
 	chessboard = ((chessboard >> 2) & 0x33333333) + (chessboard & 0x33333333);
 	chessboard = ((chessboard >> 4) & 0x0f0f0f0f) + (chessboard & 0x0f0f0f0f);
@@ -321,7 +321,7 @@ inline void OneDirectionOutput(CHESS * position, CHESS *bridge, const int horizo
 	}
 	return;
 }
-inline void Output( const CHESS chessboard[], int side)
+inline void Output(const CHESS chessboard[], int side)
 {
 	int cnt = 2;
 	CHESS temp = chessboard[side] ^ output[side];
@@ -377,10 +377,10 @@ inline void Input(CHESS chessboard[])
 }
 
 /**********************PART 4 SEARCH******************/
-inline int Evaluate( const CHESS chessboard[], const int side)
+inline int Evaluate(const CHESS chessboard[], const int side)
 {
 	int value = 0;
-	int mine = Count(chessboard[side]);
+	/*int mine = Count(chessboard[side]);
 	int enemy = Count(chessboard[side ^ 1]);
 	int number = mine < enemy ? mine : enemy;
 	if (number >= 10)
@@ -402,7 +402,9 @@ inline int Evaluate( const CHESS chessboard[], const int side)
 	{
 		value += mine << kEvaluateNumber;
 		value += (Count(chessboard[side] & chessboard[KING])) << (kEvaluateType + 2);
-	}
+	}*/
+	value += Count(chessboard[side]) << kEvaluateNumber;
+	value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
 	return value;
 }
 
@@ -438,7 +440,7 @@ typedef struct Hashlist
 	CHESS chessboard[3];
 	int next;
 }HASH;
-HASH hash[MAXSIZE/4];
+HASH hash[MAXSIZE / 4];
 int hash_index;
 int hash_head[2][MOD];
 
@@ -487,18 +489,18 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 	father->size = 0;
 	if (!chessboard[side]) return -INFINITY;
 	if (!chessboard[side ^ 1]) return INFINITY;
-	if (turn + depth > 120) 
-		return (Count(chessboard[side]) - Count(chessboard[side ^ 1]) 
-			+ ((Count(chessboard[side] & chessboard[KING]) 
-			- Count(chessboard[side ^ 1] & chessboard[KING])) << 1))
-			>0? INFINITY:-INFINITY;
+	if (turn + depth >= 120)
+		return (Count(chessboard[side]) - Count(chessboard[side ^ 1])
+			+ ((Count(chessboard[side] & chessboard[KING])
+				- Count(chessboard[side ^ 1] & chessboard[KING])) << 1))
+	> 0 ? INFINITY : -INFINITY;
 	if (depth == level)
 	{
 		return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
 	}
 	EXPECT expect;
 	int pvs = 0;
-	int start = method_index+1;
+	int start = method_index + 1;
 	int end = start;
 	int rank = HashFind(chessboard, side);
 	HASH *node = &hash[rank];
@@ -507,11 +509,11 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 		if (FindPossibleJump(chessboard, side) || FindPossibleMove(chessboard, side))
 		{
 			end = method_index;
-			for (int i = start ; i <= end; i++)
+			for (int i = start; i <= end; i++)
 			{
 				method[i].value = Evaluate(method[i].chessboard, side) - Evaluate(method[i].chessboard, side ^ 1);
 			}
-			MethodSort(start , end);
+			MethodSort(start, end);
 			if (method_index > (MAXSIZE / 125)*(1 + turn))
 			{
 				memory_out = 1;
@@ -562,7 +564,7 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 			}
 		}
 	}
-	for (int i = start ; i <= end; i++)/*search all the method*/
+	for (int i = start; i <= end; i++)/*search all the method*/
 	{
 		int pos = key[i];
 		if (rank&&method[pos].chessboard[WHITE] == node->expect[WHITE]
@@ -590,7 +592,7 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 				if (!memory_out)
 				{
 					MethodSort(start, i);
-					rank = HashPush(chessboard, start , end, side);
+					rank = HashPush(chessboard, start, end, side);
 				}
 				else
 				{
@@ -608,14 +610,14 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 			pvs = 1;
 			alpha = value;
 			father->size = expect.size + 1;
-			father->chessboard[0][WHITE]=method[pos].chessboard[WHITE];
+			father->chessboard[0][WHITE] = method[pos].chessboard[WHITE];
 			father->chessboard[0][BLACK] = method[pos].chessboard[BLACK];
 			father->chessboard[0][KING] = method[pos].chessboard[KING];
 			for (int j = 0; j < expect.size; j++)
 			{
-				father->chessboard[j+1][WHITE] = expect.chessboard[j][WHITE];
-				father->chessboard[j+1][BLACK] = expect.chessboard[j][BLACK];
-				father->chessboard[j+1][KING] = expect.chessboard[j][KING];
+				father->chessboard[j + 1][WHITE] = expect.chessboard[j][WHITE];
+				father->chessboard[j + 1][BLACK] = expect.chessboard[j][BLACK];
+				father->chessboard[j + 1][KING] = expect.chessboard[j][KING];
 			}
 			if (!depth)
 			{
@@ -676,7 +678,7 @@ void Search(CHESS chessboard[], const int side)
 	for (depth = 1; (turn + depth <= 120) && !time_out; depth += 2)
 	{
 		EXPECT expect;
-		if (INFINITY == AlphaBeta(depth, 0, -INFINITY, INFINITY, chessboard, side, &expect))
+		if (INFINITY == AlphaBeta(depth, 0, -INFINITY - 1, INFINITY + 1, chessboard, side, &expect))
 		{
 			break;
 		}
@@ -684,17 +686,17 @@ void Search(CHESS chessboard[], const int side)
 		{
 			printf("level:%d expect:%d\n", depth, expect.size);
 		}
-		for (int i = 0, chess_side = side; i < expect.size; i++,chess_side^=1)
+		for (int i = 0, chess_side = side; i < expect.size; i++, chess_side ^= 1)
 		{
 			/*if its hash do not exist,push hash and its expect and method and sort it out*/
 			int rank = HashFind(expect.chessboard[i], chess_side);
 			if (!rank)
 			{
-				int start = method_index+1;
+				int start = method_index + 1;
 				if (FindPossibleJump(expect.chessboard[i], chess_side) || FindPossibleMove(expect.chessboard[i], chess_side))
 				{
-					rank = HashPush(expect.chessboard[i], start ,method_index,chess_side);
-					MethodSort(start , method_index);
+					rank = HashPush(expect.chessboard[i], start, method_index, chess_side);
+					MethodSort(start, method_index);
 				}
 			}
 		}
