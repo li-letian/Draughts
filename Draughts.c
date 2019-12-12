@@ -487,7 +487,7 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 	father->size = 0;
 	if (!chessboard[side]) return -INFINITY;
 	if (!chessboard[side ^ 1]) return INFINITY;
-	if (turn + depth >= 120) 
+	if (turn + depth > 120) 
 		return (Count(chessboard[side]) - Count(chessboard[side ^ 1]) 
 			+ ((Count(chessboard[side] & chessboard[KING]) 
 			- Count(chessboard[side ^ 1] & chessboard[KING])) << 1))
