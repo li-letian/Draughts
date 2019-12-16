@@ -1,10 +1,11 @@
 #include<stdio.h>
 #include<string.h>
+#include<stdlib.h>
 #include<time.h>
 #define DEBUG 0
 /***********PART 0 DEFINATION*********/
 /*about the size*/
-#define MAXSIZE 10000010
+#define MAXSIZE 9000010
 /*each turn contributes to 1 200 000 moehod and 280 000 node*/
 /*each turn makes about 17 depth search*/
 /*that is for about 1500 seconds*/
@@ -33,49 +34,50 @@ typedef unsigned int CHESS;
 /*
 suppose my chessboard looks like this
 it is just a reverse of the required key board
-						7
-						6
-						5
-						4
-						3
-						2
-						1
-						0
+				7
+				6
+				5
+				4
+				3
+				2
+				1
+				0
 7 6 5 4 3 2 1 0
 but acutally it looks more like
-			7
-			6
-			5
-			4
-			3
-			2
-			1
-			0
+		7
+		6
+		5
+		4
+		3
+		2
+		1
+		0
 3 2 1 0
 and finally it looks like
-xxxx       7
-xxxx       6
-0xxxx     5
-0xxxx     4
-00xxxx   3
-00xxxx   2
-000xxxx 1
-000xxxx 0
-	 3210
+xxxx    7
+xxxx    6
+ xxxx   5
+ xxxx   4
+  xxxx  3
+  xxxx  2
+   xxxx 1
+   xxxx 0
+   3210
 and the white chess is beneath the black chess
 (so this is just a reversed and simplified board of the required chessboard
 and we can still calculate the right position
 and my chessboard looks like a unsigned integer
 and the bit goes like
-31.....28
-.............
-...........4
+31...28
+27.....
+.......
+......4
 3 2 1 0
 */
 /*****************PART 0.5 DEBUG************/
 inline void debug(const CHESS chessboard[])
 {
-	printf("\n****************\n");
+	printf("DEBUG \nDEBUG ****************\nDEBUG ");
 	fflush(stdout);
 	for (int j = 0; j < 8; j++)
 	{
@@ -99,17 +101,17 @@ inline void debug(const CHESS chessboard[])
 		fflush(stdout);
 		if (j == 7) printf("X");
 		fflush(stdout);
-		printf("\n");
+		printf("\nDEBUG ");
 		fflush(stdout);
 	}
-	printf("\n");
+	printf("\nDEBUG ");
 	fflush(stdout);
 	for (int i = 7; i >= 0; i--)
 	{
 		printf("%d", i);
 		fflush(stdout);
 	}
-	printf("\n");
+	printf("\nDEBUG ");
 	fflush(stdout);
 	for (int i = 6; i >= 0; i--)
 	{
@@ -118,7 +120,7 @@ inline void debug(const CHESS chessboard[])
 	}
 	printf("Y");
 	fflush(stdout);
-	printf("\n****************\n");
+	printf("\nDEBUG ****************\nDEBUG ");
 	fflush(stdout);
 	printf("\n");
 	fflush(stdout);
@@ -129,11 +131,12 @@ const int kEvaluateNumber = 15;
 const int kEvaluateCorner = 4;
 const int kEvaluatePosition[2][8] = { {0,0,1,2,3,6,7,8},{8,7,6,3,2,1,0,0} };
 const int kEvaluateType = 16;
-const long long time_limit = 1800;
+long long time_limit = 1800;
 const CHESS kCutMove[2][2] = { {0xefefefe0,0x0fefefef},{0xf7f7f7f0,0x07f7f7f7} };
 const CHESS kCutJump[2][2] = { {0xeeeeee00,0x00eeeeee}, {0x77777700,0x00777777} };
 const CHESS kKing[2] = { 0xf0000000,0x0000000f };
-const CHESS kRow[8] = { 0x0000000f,0x000000f0,0x00000f00,0x0000f000,0x000f0000,0x00f00000,0x0f000000,0xf0000000 };
+const CHESS kRow[8] = { 0x0000000f,0x000000f0,0x00000f00,0x0000f000,
+						0x000f0000,0x00f00000,0x0f000000,0xf0000000 };
 const CHESS kEven = 0x0f0f0f0f;
 const CHESS kEdge = 0x09999990;
 /*generate a specific direction bitboard move or jump
@@ -159,7 +162,8 @@ inline CHESS Jump(const CHESS position, const  int horizontal, const int vertica
 		(position >> (7 + ((horizontal ^ 1) << 1)));
 }
 /*to count how many 1 in its  binary number*/
-inline int Count(CHESS chessboard) {
+inline int Count(CHESS chessboard)
+{
 	chessboard = ((chessboard >> 1) & 0x55555555) + (chessboard & 0x55555555);
 	chessboard = ((chessboard >> 2) & 0x33333333) + (chessboard & 0x33333333);
 	chessboard = ((chessboard >> 4) & 0x0f0f0f0f) + (chessboard & 0x0f0f0f0f);
@@ -176,8 +180,8 @@ typedef struct Methodlist
 	CHESS chessboard[3];
 	int value;
 }METHOD;
-METHOD method[MAXSIZE];
-int key[MAXSIZE];
+METHOD method[1000];
+int key[1000];
 int method_index;
 /*the queue to bfs and its head and tail
 queue[i][0]saves chessboard of present statement of all my chess
@@ -204,7 +208,8 @@ inline void QueuePop(CHESS *state, CHESS *bridge, CHESS *position)
 	(*position) = queue[queue_head][POSITION];
 	queue_head++;
 }
-inline void OneDirectionJump(const CHESS enemy, const CHESS state, const CHESS bridge, const CHESS position, const int horizontal, const int vertical)
+inline void OneDirectionJump(const CHESS enemy, const CHESS state, const CHESS bridge,
+	const CHESS position, const int horizontal, const int vertical)
 {
 	if (!((position&kCutMove[horizontal][vertical]) && (position&kCutJump[horizontal][vertical])))
 	{
@@ -247,12 +252,16 @@ inline int  FindPossibleJump(const CHESS chessboard[], const int side)
 		method[method_index].chessboard[side] = queue[queue_head][MINE];
 		method[method_index].chessboard[side ^ 1] = chessboard[side ^ 1] ^ queue[queue_head][ENEMY];
 		method[method_index].chessboard[KING] = chessboard[KING] ^ (chessboard[KING] & queue[queue_head][ENEMY]);
-		method[method_index].chessboard[KING] = method[method_index].chessboard[KING] & (chessboard[side] ^ queue[queue_head][MINE]) ? method[method_index].chessboard[KING] ^ (chessboard[side] ^ queue[queue_head][MINE]) : method[method_index].chessboard[KING];
+		method[method_index].chessboard[KING] = method[method_index].chessboard[KING]
+			& (chessboard[side] ^ queue[queue_head][MINE]) ?
+			method[method_index].chessboard[KING] ^ (chessboard[side] ^ queue[queue_head][MINE]) :
+			method[method_index].chessboard[KING];
 		method[method_index].chessboard[KING] |= queue[queue_head][MINE] & kKing[side];
 	}
 	return method_index - start;
 }
-inline void OneDirectionMove(const CHESS chessboard[], const CHESS position, const int side, const int horizontal, const int vertical)
+inline void OneDirectionMove(const CHESS chessboard[], const CHESS position,
+	const int side, const int horizontal, const int vertical)
 {
 	if (!(position&kCutMove[horizontal][vertical]))
 	{
@@ -293,7 +302,6 @@ inline int FindPossibleMove(const CHESS chessboard[], const int side)
 CHESS output[3];
 int my_side;
 int time_out;
-int memory_out;
 int turn;
 inline int ChessToCoordinate(const CHESS state)
 {
@@ -407,13 +415,12 @@ inline int Evaluate(const CHESS chessboard[], const int side)
 	value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
 	return value;
 }
-
 /*key saves the index of a rank in one node*/
 void MethodSort(const int start, const int end)
 {
 	int i = start;
 	int j = end;
-	int mid = method[key[(start + end) / 2]].value;
+	int mid = method[key[(start + end) >> 1]].value;
 	while (i <= j)
 	{
 		while (method[key[i]].value > mid) i++;
@@ -430,20 +437,17 @@ void MethodSort(const int start, const int end)
 	if (i < end)  MethodSort(i, end);
 	return;
 }
-
-/*hash the chessboard to find its interval of key*/
 typedef struct Hashlist
 {
-	int start;
-	int end;
 	CHESS expect[3];
+	int value;
+	int type;
 	CHESS chessboard[3];
 	int next;
 }HASH;
 HASH hash[MAXSIZE / 4];
 int hash_index;
 int hash_head[2][MOD];
-
 inline int Hash(const CHESS chessboard[])
 {
 	return ((chessboard[WHITE] >> 3) ^ chessboard[KING] ^ (chessboard[BLACK] << 3)) % MOD;
@@ -463,28 +467,34 @@ inline int HashFind(const CHESS chessboard[], int side)
 	}
 	return 0;
 }
-inline int HashPush(const CHESS chessboard[], const int start, const int end, const int side)
+inline int HashPush(const CHESS chessboard[], const CHESS expect[], const int side)
 {
 	int pos = Hash(chessboard);
 	++hash_index;
 	HASH *node = &hash[hash_index];
-	node->start = start;
-	node->end = end;
 	node->chessboard[WHITE] = chessboard[WHITE];
 	node->chessboard[BLACK] = chessboard[BLACK];
 	node->chessboard[KING] = chessboard[KING];
+	node->expect[WHITE] = expect[WHITE];
+	node->expect[BLACK] = expect[BLACK];
+	node->expect[KING] = expect[KING];
 	node->next = hash_head[side][pos];
 	hash_head[side][pos] = hash_index;
 	return hash_index;
 }
 long long clock_start;
 long long clock_end;
+long long former_value;
 typedef struct Expect
 {
 	int size;
 	CHESS chessboard[35][3];
 }EXPECT;
-int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS chessboard[], const int side, EXPECT *father)
+
+int cnt;
+
+int AlphaBeta(const int level, const int depth, int alpha, int beta,
+	const CHESS chessboard[], const int side, EXPECT *father)
 {
 	father->size = 0;
 	if (!chessboard[side]) return -INFINITY;
@@ -498,111 +508,32 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 	{
 		return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
 	}
+	cnt++;
 	EXPECT expect;
 	int pvs = 0;
 	int start = method_index + 1;
 	int end = start;
-	int rank = HashFind(chessboard, side);
-	HASH *node = &hash[rank];
-	if (!rank)/*the methods haven't been generated before*/
+	int pos = HashFind(chessboard, side);
+	HASH *node = &hash[pos];
+	if (FindPossibleJump(chessboard, side) || FindPossibleMove(chessboard, side))
 	{
-		if (FindPossibleJump(chessboard, side) || FindPossibleMove(chessboard, side))
+		end = method_index;
+		for (int i = start; i <= end; i++)
 		{
-			end = method_index;
-			for (int i = start; i <= end; i++)
-			{
-				method[i].value = Evaluate(method[i].chessboard, side) - Evaluate(method[i].chessboard, side ^ 1);
-			}
-			MethodSort(start, end);
-			if (method_index > (MAXSIZE / 125)*(1 + turn))
-			{
-				memory_out = 1;
-			}
+			method[i].value = Evaluate(method[i].chessboard, side) - Evaluate(method[i].chessboard, side ^ 1);
 		}
-		else/*nowhere to go you have lost*/
-		{
-			return -INFINITY;
-		}
+		MethodSort(start, end);
 	}
 	else
 	{
-		start = (node->start);
-		end = (node->end);
-		if (node->expect[side])/*if exists,search the expected method*/
-		{
-			int value = -AlphaBeta(level, depth + 1, -beta, -alpha, node->expect, side ^ 1, &expect);
-			if (value >= beta)
-			{
-				return beta;
-			}
-			if (value > alpha)
-			{
-				pvs = 1;
-				alpha = value;
-				father->size = expect.size + 1;
-				father->chessboard[0][WHITE] = node->expect[WHITE];
-				father->chessboard[0][BLACK] = node->expect[BLACK];
-				father->chessboard[0][KING] = node->expect[KING];
-				for (int i = 0; i < expect.size; i++)
-				{
-					father->chessboard[i + 1][WHITE] = expect.chessboard[i][WHITE];
-					father->chessboard[i + 1][BLACK] = expect.chessboard[i][BLACK];
-					father->chessboard[i + 1][KING] = expect.chessboard[i][KING];
-				}
-				if (!depth)
-				{
-					output[WHITE] = node->expect[WHITE];
-					output[BLACK] = node->expect[BLACK];
-					output[KING] = node->expect[KING];
-				}
-			}
-			clock_end = clock();
-			if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
-			{
-				time_out = 1;
-				return alpha;
-			}
-		}
+		return -INFINITY;
 	}
-	for (int i = start; i <= end; i++)/*search all the method*/
+	if (pos)
 	{
-		int pos = key[i];
-		if (rank&&method[pos].chessboard[WHITE] == node->expect[WHITE]
-			&& method[pos].chessboard[BLACK] == node->expect[BLACK]
-			&& method[pos].chessboard[KING] == node->expect[KING])
-			continue;
-		int value;
-		if (pvs)/*have a try if this node is a pvs*/
-		{
-			value = -AlphaBeta(level, depth + 1, -alpha - 1, -alpha, method[pos].chessboard, side ^ 1, &expect);
-			if (value > alpha&&value < beta)
-			{
-				value = -AlphaBeta(level, depth + 1, -beta, -alpha, method[pos].chessboard, side ^ 1, &expect);
-			}
-		}
-		else
-		{
-			value = -AlphaBeta(level, depth + 1, -beta, -alpha, method[pos].chessboard, side ^ 1, &expect);
-		}
-		method[pos].value = value;
+		int value = -AlphaBeta(level, depth + 1, -beta, -alpha, node->expect, side ^ 1, &expect);
 		if (value >= beta)
 		{
-			if (!rank)
-			{
-				if (!memory_out)
-				{
-					MethodSort(start, i);
-					rank = HashPush(chessboard, start, end, side);
-				}
-				else
-				{
-					method_index = start - 1;
-				}
-			}
-			else
-			{
-				MethodSort(start, i);
-			}
+			method_index = start - 1;
 			return beta;
 		}
 		if (value > alpha)
@@ -610,61 +541,86 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 			pvs = 1;
 			alpha = value;
 			father->size = expect.size + 1;
-			father->chessboard[0][WHITE] = method[pos].chessboard[WHITE];
-			father->chessboard[0][BLACK] = method[pos].chessboard[BLACK];
-			father->chessboard[0][KING] = method[pos].chessboard[KING];
-			for (int j = 0; j < expect.size; j++)
+			father->chessboard[0][WHITE] = node->expect[WHITE];
+			father->chessboard[0][BLACK] = node->expect[BLACK];
+			father->chessboard[0][KING] = node->expect[KING];
+			for (int i = 0; i < expect.size; i++)
 			{
-				father->chessboard[j + 1][WHITE] = expect.chessboard[j][WHITE];
-				father->chessboard[j + 1][BLACK] = expect.chessboard[j][BLACK];
-				father->chessboard[j + 1][KING] = expect.chessboard[j][KING];
+				father->chessboard[i + 1][WHITE] = expect.chessboard[i][WHITE];
+				father->chessboard[i + 1][BLACK] = expect.chessboard[i][BLACK];
+				father->chessboard[i + 1][KING] = expect.chessboard[i][KING];
 			}
-			if (!depth)
+			if (!depth&&former_value <= alpha)
 			{
-				output[WHITE] = method[pos].chessboard[WHITE];
-				output[BLACK] = method[pos].chessboard[BLACK];
-				output[KING] = method[pos].chessboard[KING];
+				output[WHITE] = node->expect[WHITE];
+				output[BLACK] = node->expect[BLACK];
+				output[KING] = node->expect[KING];
 			}
 		}
 		clock_end = clock();
 		if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
 		{
 			time_out = 1;
-			if (!rank)
-			{
-				if (!memory_out)
-				{
-					MethodSort(start, i);
-					rank = HashPush(chessboard, start, end, side);
-				}
-				else
-				{
-					method_index = start - 1;
-				}
-			}
-			else
-			{
-				MethodSort(start, i);
-			}
+			method_index = start - 1;
 			return alpha;
 		}
 	}
-	if (!rank)
+	for (int i = start; i <= end; i++)/*search all the method*/
 	{
-		if (!memory_out)
+		int temp = key[i];
+		if (temp&&method[temp].chessboard[WHITE] == node->expect[WHITE]
+			&& method[temp].chessboard[BLACK] == node->expect[BLACK]
+			&& method[temp].chessboard[KING] == node->expect[KING])
+			continue;
+		int value;
+		if (pvs)
 		{
-			MethodSort(start, end);
-			rank = HashPush(chessboard, start, end, side);
+			value = -AlphaBeta(level, depth + 1, -alpha - 1, -alpha, method[temp].chessboard, side ^ 1, &expect);
+			if (value > alpha&&value < beta)
+			{
+				value = -AlphaBeta(level, depth + 1, -beta, -alpha, method[temp].chessboard, side ^ 1, &expect);
+			}
 		}
 		else
 		{
+			value = -AlphaBeta(level, depth + 1, -beta, -alpha, method[temp].chessboard, side ^ 1, &expect);
+		}
+		method[temp].value = value;
+		if (value >= beta)
+		{
 			method_index = start - 1;
+			return beta;
+		}
+		if (value > alpha)
+		{
+			pvs = 1;
+			alpha = value;
+			father->size = expect.size + 1;
+			father->chessboard[0][WHITE] = method[temp].chessboard[WHITE];
+			father->chessboard[0][BLACK] = method[temp].chessboard[BLACK];
+			father->chessboard[0][KING] = method[temp].chessboard[KING];
+			for (int j = 0; j < expect.size; j++)
+			{
+				father->chessboard[j + 1][WHITE] = expect.chessboard[j][WHITE];
+				father->chessboard[j + 1][BLACK] = expect.chessboard[j][BLACK];
+				father->chessboard[j + 1][KING] = expect.chessboard[j][KING];
+			}
+			if (!depth&&former_value <= alpha)
+			{
+				output[WHITE] = method[temp].chessboard[WHITE];
+				output[BLACK] = method[temp].chessboard[BLACK];
+				output[KING] = method[temp].chessboard[KING];
+			}
+		}
+		clock_end = clock();
+		if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
+		{
+			time_out = 1;
+			method_index = start - 1;
+			return alpha;
 		}
 	}
-	else
-	{
-		MethodSort(start, end);
-	}
+	method_index = start - 1;
 	return alpha;
 }
 
@@ -672,32 +628,51 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
 void Search(CHESS chessboard[], const int side)
 {
 	time_out = 0;
-	memory_out = 0;
+	former_value = -INFINITY - 1;
 	int depth;
-	/*about five steps the list should be reset*/
-	for (depth = 1; (turn + depth <= 120) && !time_out; depth += 2)
+	time_limit = 1700;
+	if (0)
 	{
+		time_limit = INFINITY;
+	}
+	for (depth = 1; (turn + depth <= 120) && !time_out&&depth <= 13; depth += 2)
+	{
+		cnt = 0;
+		if (0)
+		{
+			if (depth >= 11)
+			{
+				time_out = 1;
+			}
+		}
 		EXPECT expect;
-		if (INFINITY == AlphaBeta(depth, 0, -INFINITY - 1, INFINITY + 1, chessboard, side, &expect))
+		former_value = AlphaBeta(depth, 0, -INFINITY - 1, INFINITY + 1, chessboard, side, &expect);
+		if (former_value == INFINITY)
 		{
 			break;
 		}
 		if (DEBUG)
 		{
-			printf("level:%d expect:%d\n", depth, expect.size);
+			printf("DEBUG level:%d expect:%d node:%d value:%d\n", depth, expect.size, cnt, former_value);
 		}
+
 		for (int i = 0, chess_side = side; i < expect.size; i++, chess_side ^= 1)
 		{
 			/*if its hash do not exist,push hash and its expect and method and sort it out*/
-			int rank = HashFind(expect.chessboard[i], chess_side);
+			int rank;
+			if (i) rank = HashFind(expect.chessboard[i], chess_side);
+			else rank = HashFind(chessboard, chess_side);
 			if (!rank)
 			{
-				int start = method_index + 1;
-				if (FindPossibleJump(expect.chessboard[i], chess_side) || FindPossibleMove(expect.chessboard[i], chess_side))
-				{
-					rank = HashPush(expect.chessboard[i], start, method_index, chess_side);
-					MethodSort(start, method_index);
-				}
+				if (i) rank = HashPush(expect.chessboard[i - 1], expect.chessboard[i], chess_side);
+				else rank = HashPush(chessboard, expect.chessboard[i], chess_side);
+			}
+			else
+			{
+				HASH *node = &hash[rank];
+				node->expect[WHITE] = expect.chessboard[i][WHITE];
+				node->expect[BLACK] = expect.chessboard[i][BLACK];
+				node->expect[KING] = expect.chessboard[i][KING];
 			}
 		}
 	}
@@ -725,11 +700,9 @@ void Work(void)
 			if (DEBUG)
 			{
 				debug(chessboard);
-				printf("time:%lld\n", clock_end - clock_start);
+				printf("DEBUG time:%lld\n", clock_end - clock_start);
 				fflush(stdout);
-				printf("methodlist:%d\n", method_index);
-				fflush(stdout);
-				printf("hashlist:%d\n", hash_index);
+				printf("DEBUG hashlist:%d\n", hash_index);
 				fflush(stdout);
 			}
 			continue;
@@ -753,7 +726,7 @@ void Work(void)
 	}
 	return;
 }
-int main()
+int main(void)
 {
 	scanf("START %d", &my_side);
 	if (my_side == 2) my_side = 0;
