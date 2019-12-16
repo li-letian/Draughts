@@ -2,37 +2,31 @@
 #include<string.h>
 #include<stdlib.h>
 #include<time.h>
+
+typedef unsigned int CHESS;
 #define DEBUG 0
-/***********PART 0 DEFINATION*********/
-/*about the size*/
-#define MAXSIZE 9000010
-/*each turn contributes to 1 200 000 moehod and 280 000 node*/
-/*each turn makes about 17 depth search*/
-/*that is for about 1500 seconds*/
-/*so the right size should at least be 90 000 000*/
-/*but 350MB memory support at most 20 000 000 large*/
+#define MAXSIZE 2000010
 #define INFINITY 0x3f3f3f3f
-/*some good mods
+#define MOD 1226959
+/*good mods
 1226959 1635947 2181271 2908361
 3877817 5170427 6893911 9 191 891
 12255871 16341163 21788233*/
-#define MOD 1226959
-/*about the chess type*/
+
 #define WHITE 0
 #define BLACK 1
 #define KING 2
-/*about the absolote direction*/
+
 #define UP 1
 #define DOWN 0
 #define OUTSIDE 1
 #define INSIDE 0
-/*about queue*/
+
 #define MINE 0
 #define ENEMY 1
 #define POSITION 2
-typedef unsigned int CHESS;
-/*
-suppose my chessboard looks like this
+
+/*suppose my chessboard looks like this
 it is just a reverse of the required key board
 				7
 				6
@@ -63,18 +57,14 @@ xxxx    6
    xxxx 1
    xxxx 0
    3210
-and the white chess is beneath the black chess
-(so this is just a reversed and simplified board of the required chessboard
-and we can still calculate the right position
 and my chessboard looks like a unsigned integer
 and the bit goes like
 31...28
 27.....
 .......
 ......4
-3 2 1 0
-*/
-/*****************PART 0.5 DEBUG************/
+3 2 1 0*/
+
 inline void debug(const CHESS chessboard[])
 {
 	printf("DEBUG \nDEBUG ****************\nDEBUG ");
@@ -125,29 +115,66 @@ inline void debug(const CHESS chessboard[])
 	printf("\n");
 	fflush(stdout);
 }
-/**********PART 1 PREWORK*************/
-/*constant*/
+
 const int kEvaluateNumber = 15;
-const int kEvaluateCorner = 4;
-const int kEvaluatePosition[2][8] = { {0,0,1,2,3,6,7,8},{8,7,6,3,2,1,0,0} };
 const int kEvaluateType = 16;
-long long time_limit = 1800;
+
 const CHESS kCutMove[2][2] = { {0xefefefe0,0x0fefefef},{0xf7f7f7f0,0x07f7f7f7} };
 const CHESS kCutJump[2][2] = { {0xeeeeee00,0x00eeeeee}, {0x77777700,0x00777777} };
 const CHESS kKing[2] = { 0xf0000000,0x0000000f };
-const CHESS kRow[8] = { 0x0000000f,0x000000f0,0x00000f00,0x0000f000,
-						0x000f0000,0x00f00000,0x0f000000,0xf0000000 };
 const CHESS kEven = 0x0f0f0f0f;
-const CHESS kEdge = 0x09999990;
-/*generate a specific direction bitboard move or jump
-suppose
-the value of horizontal:0 means step right, 1 means step left
-the value of vertical:0 means step back, 1 means step forward
-chessboard[0]means white
-chessboard[1]means black
-chessboard[2]means king
-*/
-/*return the next position */
+
+long long clock_start;
+long long clock_end;
+const long long time_limit = 1700;
+
+CHESS output[3];
+int my_side;
+int time_out;
+int turn;
+int former_value;
+int node_count;
+
+typedef struct Methodlist
+{
+	CHESS chessboard[3];
+	int value;
+}METHOD;
+METHOD method[2019];
+int key[2019];
+int method_index;
+
+CHESS queue[300][3];
+int queue_head = 1;
+int queue_tail = 0;
+
+typedef struct Hashlist
+{
+	CHESS expect[3];
+	int value;
+	CHESS chessboard[3];
+	int next;
+}HASH;
+HASH hash[MAXSIZE];
+int hash_index;
+int hash_head[2][MOD];
+
+typedef struct Expect
+{
+	int size;
+	CHESS chessboard[35][3];
+}EXPECT;
+
+
+
+inline int Count(CHESS chessboard)
+{
+	chessboard = ((chessboard >> 1) & 0x55555555) + (chessboard & 0x55555555);
+	chessboard = ((chessboard >> 2) & 0x33333333) + (chessboard & 0x33333333);
+	chessboard = ((chessboard >> 4) & 0x0f0f0f0f) + (chessboard & 0x0f0f0f0f);
+	chessboard = ((chessboard >> 8) & 0x00ff00ff) + (chessboard & 0x00ff00ff);
+	return (chessboard >> 16) + (chessboard & 0x0000ffff);
+}
 inline CHESS Move(const CHESS position, const int horizontal, const int vertical)
 {
 	return vertical ?
@@ -161,34 +188,6 @@ inline CHESS Jump(const CHESS position, const  int horizontal, const int vertica
 		(position << (7 + (horizontal << 1))) :
 		(position >> (7 + ((horizontal ^ 1) << 1)));
 }
-/*to count how many 1 in its  binary number*/
-inline int Count(CHESS chessboard)
-{
-	chessboard = ((chessboard >> 1) & 0x55555555) + (chessboard & 0x55555555);
-	chessboard = ((chessboard >> 2) & 0x33333333) + (chessboard & 0x33333333);
-	chessboard = ((chessboard >> 4) & 0x0f0f0f0f) + (chessboard & 0x0f0f0f0f);
-	chessboard = ((chessboard >> 8) & 0x00ff00ff) + (chessboard & 0x00ff00ff);
-	return (chessboard >> 16) + (chessboard & 0x0000ffff);
-}
-/*********PART 2 FIND WAYS TO GO**********/
-/*the list to save the moving method and its index
-for each side and chessboard statement
-we generate a list including every possible single move or every possible jump
-and return its size*/
-typedef struct Methodlist
-{
-	CHESS chessboard[3];
-	int value;
-}METHOD;
-METHOD method[1000];
-int key[1000];
-int method_index;
-/*the queue to bfs and its head and tail
-queue[i][0]saves chessboard of present statement of all my chess
-queue[i][1]saves chessboard of beaten enemy
-queue[i][2]saves chessboard of present extending position*/
-CHESS queue[300][3];
-int queue_head = 1, queue_tail = 0;
 inline void QueueReset(void)
 {
 	queue_head = 1;
@@ -276,7 +275,7 @@ inline void OneDirectionMove(const CHESS chessboard[], const CHESS position,
 	method[method_index].chessboard[side ^ 1] = chessboard[side ^ 1];
 	method[method_index].chessboard[KING] = (chessboard[KING] & position) ? chessboard[KING] ^ move : chessboard[KING];
 	method[method_index].chessboard[KING] |= method[method_index].chessboard[side] & kKing[side];
-}/*debug finished*/
+}
 inline int FindPossibleMove(const CHESS chessboard[], const int side)
 {
 	int start = method_index;
@@ -297,12 +296,8 @@ inline int FindPossibleMove(const CHESS chessboard[], const int side)
 		generate ^= position;
 	}
 	return method_index - start;
-}/*debug finidhed*/
-/**********PART 3 INPUT AND OUTPUT**********/
-CHESS output[3];
-int my_side;
-int time_out;
-int turn;
+}
+
 inline int ChessToCoordinate(const CHESS state)
 {
 	int temp = 0;
@@ -384,38 +379,13 @@ inline void Input(CHESS chessboard[])
 	}
 }
 
-/**********************PART 4 SEARCH******************/
 inline int Evaluate(const CHESS chessboard[], const int side)
 {
 	int value = 0;
-	/*int mine = Count(chessboard[side]);
-	int enemy = Count(chessboard[side ^ 1]);
-	int number = mine < enemy ? mine : enemy;
-	if (number >= 10)
-	{
-		value += mine << kEvaluateNumber;
-		value += Count(chessboard[side] & kEdge) << kEvaluateCorner;
-		value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
-	}
-	else if (number >= 5)
-	{
-		value += mine << kEvaluateNumber;
-		value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
-		for (int i = 0; i < 8; i++)
-		{
-			value += Count(chessboard[side] & kRow[i]) << kEvaluatePosition[side][i];
-		}
-	}
-	else
-	{
-		value += mine << kEvaluateNumber;
-		value += (Count(chessboard[side] & chessboard[KING])) << (kEvaluateType + 2);
-	}*/
 	value += Count(chessboard[side]) << kEvaluateNumber;
 	value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
 	return value;
 }
-/*key saves the index of a rank in one node*/
 void MethodSort(const int start, const int end)
 {
 	int i = start;
@@ -437,17 +407,6 @@ void MethodSort(const int start, const int end)
 	if (i < end)  MethodSort(i, end);
 	return;
 }
-typedef struct Hashlist
-{
-	CHESS expect[3];
-	int value;
-	int type;
-	CHESS chessboard[3];
-	int next;
-}HASH;
-HASH hash[MAXSIZE / 4];
-int hash_index;
-int hash_head[2][MOD];
 inline int Hash(const CHESS chessboard[])
 {
 	return ((chessboard[WHITE] >> 3) ^ chessboard[KING] ^ (chessboard[BLACK] << 3)) % MOD;
@@ -482,17 +441,6 @@ inline int HashPush(const CHESS chessboard[], const CHESS expect[], const int si
 	hash_head[side][pos] = hash_index;
 	return hash_index;
 }
-long long clock_start;
-long long clock_end;
-long long former_value;
-typedef struct Expect
-{
-	int size;
-	CHESS chessboard[35][3];
-}EXPECT;
-
-int cnt;
-
 int AlphaBeta(const int level, const int depth, int alpha, int beta,
 	const CHESS chessboard[], const int side, EXPECT *father)
 {
@@ -508,7 +456,7 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
 	{
 		return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
 	}
-	cnt++;
+	node_count++;
 	EXPECT expect;
 	int pvs = 0;
 	int start = method_index + 1;
@@ -624,27 +572,14 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
 	return alpha;
 }
 
-/**********PART 5 WORK**************/
 void Search(CHESS chessboard[], const int side)
 {
 	time_out = 0;
 	former_value = -INFINITY - 1;
 	int depth;
-	time_limit = 1700;
-	if (0)
-	{
-		time_limit = INFINITY;
-	}
 	for (depth = 1; (turn + depth <= 120) && !time_out&&depth <= 13; depth += 2)
 	{
-		cnt = 0;
-		if (0)
-		{
-			if (depth >= 11)
-			{
-				time_out = 1;
-			}
-		}
+		node_count = 0;
 		EXPECT expect;
 		former_value = AlphaBeta(depth, 0, -INFINITY - 1, INFINITY + 1, chessboard, side, &expect);
 		if (former_value == INFINITY)
@@ -653,12 +588,11 @@ void Search(CHESS chessboard[], const int side)
 		}
 		if (DEBUG)
 		{
-			printf("DEBUG level:%d expect:%d node:%d value:%d\n", depth, expect.size, cnt, former_value);
+			printf("DEBUG level:%d expect:%d node:%d value:%d\n", depth, expect.size, node_count, former_value);
 		}
 
 		for (int i = 0, chess_side = side; i < expect.size; i++, chess_side ^= 1)
 		{
-			/*if its hash do not exist,push hash and its expect and method and sort it out*/
 			int rank;
 			if (i) rank = HashFind(expect.chessboard[i], chess_side);
 			else rank = HashFind(chessboard, chess_side);
