@@ -128,7 +128,7 @@ long long clock_start;
 long long clock_end;
 const long long time_limit = 1700;
 
-CHESS output[3];
+CHESS output[150][3];
 int my_side;
 int time_out;
 int turn;
@@ -327,10 +327,10 @@ inline void OneDirectionOutput(CHESS * position, CHESS *bridge, const int horizo
 inline void Output(const CHESS chessboard[], int side)
 {
 	int cnt = 2;
-	CHESS temp = chessboard[side] ^ output[side];
-	CHESS bridge = chessboard[side ^ 1] ^ output[side ^ 1];
+	CHESS temp = chessboard[side] ^ output[turn][side];
+	CHESS bridge = chessboard[side ^ 1] ^ output[turn][side ^ 1];
 	int start = ChessToCoordinate(chessboard[side] & temp);
-	int end = ChessToCoordinate(output[side] & temp);
+	int end = ChessToCoordinate(output[turn][side] & temp);
 	if (bridge)
 	{
 		printf("%d %d,%d", Count(bridge) + 1, start >> 3, start & 7);
@@ -377,6 +377,9 @@ inline void Input(CHESS chessboard[])
 			chessboard[KING] ^= chessboard[KING] & CoordinateToChess(row, col);
 		}
 	}
+	output[turn][WHITE] = chessboard[WHITE];
+	output[turn][BLACK] = chessboard[BLACK];
+	output[turn][KING] = chessboard[KING];
 }
 
 inline int Evaluate(const CHESS chessboard[], const int side)
@@ -500,9 +503,9 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
 			}
 			if (!depth&&former_value <= alpha)
 			{
-				output[WHITE] = node->expect[WHITE];
-				output[BLACK] = node->expect[BLACK];
-				output[KING] = node->expect[KING];
+				output[turn][WHITE] = node->expect[WHITE];
+				output[turn][BLACK] = node->expect[BLACK];
+				output[turn][KING] = node->expect[KING];
 			}
 		}
 		clock_end = clock();
@@ -555,9 +558,9 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
 			}
 			if (!depth&&former_value <= alpha)
 			{
-				output[WHITE] = method[temp].chessboard[WHITE];
-				output[BLACK] = method[temp].chessboard[BLACK];
-				output[KING] = method[temp].chessboard[KING];
+				output[turn][WHITE] = method[temp].chessboard[WHITE];
+				output[turn][BLACK] = method[temp].chessboard[BLACK];
+				output[turn][KING] = method[temp].chessboard[KING];
 			}
 		}
 		clock_end = clock();
@@ -610,10 +613,26 @@ void Search(CHESS chessboard[], const int side)
 			}
 		}
 	}
+	if (turn >= 30
+		&& output[turn][WHITE] == output[turn - 4][WHITE]
+		&& output[turn][BLACK] == output[turn - 4][BLACK]
+		&& output[turn][KING] == output[turn - 4][KING]
+		&& (Evaluate(output[turn], side) - Evaluate(output[turn], side ^ 1)) < 0)
+	{
+		int start = method_index;
+		if (FindPossibleMove(chessboard, side))
+		{
+			int pos = start + 1 + rand() % (method_index - start);
+			output[turn][WHITE] = method[pos].chessboard[WHITE];
+			output[turn][BLACK] = method[pos].chessboard[BLACK];
+			output[turn][KING] = method[pos].chessboard[KING];
+		}
+		method_index = start;
+	}
 	Output(chessboard, side);
-	chessboard[WHITE] = output[WHITE];
-	chessboard[BLACK] = output[BLACK];
-	chessboard[KING] = output[KING];
+	chessboard[WHITE] = output[turn][WHITE];
+	chessboard[BLACK] = output[turn][BLACK];
+	chessboard[KING] = output[turn][KING];
 	return;
 }
 void Work(void)
