@@ -126,7 +126,7 @@ const CHESS kEven = 0x0f0f0f0f;
 
 long long clock_start;
 long long clock_end;
-const long long time_limit = 1700;
+const long long time_limit = 1600;
 
 CHESS output[150][3];
 int my_side;
@@ -181,7 +181,6 @@ inline CHESS Move(const CHESS position, const int horizontal, const int vertical
 		(position << (3 + horizontal + (1 ^ (!(kEven&position))))) :
 		(position >> (3 + (1 ^ horizontal) + (!(kEven&position))));
 }
-/*return the next position of the next position*/
 inline CHESS Jump(const CHESS position, const  int horizontal, const int vertical)
 {
 	return vertical ?
@@ -455,10 +454,6 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
 			+ ((Count(chessboard[side] & chessboard[KING])
 				- Count(chessboard[side ^ 1] & chessboard[KING])) << 1))
 	> 0 ? INFINITY : -INFINITY;
-	if (depth == level)
-	{
-		return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
-	}
 	node_count++;
 	EXPECT expect;
 	int pvs = 0;
@@ -466,14 +461,23 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
 	int end = start;
 	int pos = HashFind(chessboard, side);
 	HASH *node = &hash[pos];
-	if (FindPossibleJump(chessboard, side) || FindPossibleMove(chessboard, side))
+	int flag = FindPossibleJump(chessboard, side);
+	if (!flag)
+	{
+		if (depth >= level)
+		{
+			return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
+		}
+		flag = FindPossibleMove(chessboard, side);
+	}
+	if (flag)
 	{
 		end = method_index;
-		for (int i = start; i <= end; i++)
+		/*for (int i = start; i <= end; i++)
 		{
 			method[i].value = Evaluate(method[i].chessboard, side) - Evaluate(method[i].chessboard, side ^ 1);
 		}
-		MethodSort(start, end);
+		MethodSort(start, end);*/
 	}
 	else
 	{
@@ -580,7 +584,7 @@ void Search(CHESS chessboard[], const int side)
 	time_out = 0;
 	former_value = -INFINITY - 1;
 	int depth;
-	for (depth = 1; (turn + depth <= 120) && !time_out&&depth <= 13; depth += 2)
+	for (depth = 1; (turn + depth <= 120) && !time_out&&depth <= 15; depth++)
 	{
 		node_count = 0;
 		EXPECT expect;
@@ -679,6 +683,7 @@ void Work(void)
 	}
 	return;
 }
+
 int main(void)
 {
 	scanf("START %d", &my_side);
