@@ -1,30 +1,29 @@
 # Draughts
 
-#### 简介
+
+
+## 简介
 
 软件荣誉课大一上大项目
 
-李乐天 1959849
+## 答辩详情
 
-#### 排名
-
-peak 1 ~~虽然只有10min~~
-
-rank 
-
-## 数据结构与着法
-
-考虑棋盘中的可能走法
-
-![image-20191220201907800](C:%5CUsers%5Clilet%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20191220201907800.png)
-
-发现可以删除黑色格子
-
-<img src="C:%5CUsers%5Clilet%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20191220202034576.png" alt="image-20191220202034576" style="zoom:100%;" />
-
-原棋盘旋转180°，白棋子在下方，黑棋在上方，y坐标为水平方向，x坐标为竖直方向
-
-<img src="C:%5CUsers%5Clilet%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20191220202346104.png" alt="image-20191220202346104" style="zoom:125%;" />
-
-现在考虑坐标系下棋子的移动
+[![lV9ItH.md.png](https://s2.ax1x.com/2019/12/27/lV9ItH.md.png)](https://imgchr.com/i/lV9ItH)
+[![lV9h7D.md.png](https://s2.ax1x.com/2019/12/27/lV9h7D.md.png)](https://imgchr.com/i/lV9h7D)
+[![lV95Ae.md.png](https://s2.ax1x.com/2019/12/27/lV95Ae.md.png)](https://imgchr.com/i/lV95Ae)
+[![lV9ohd.md.png](https://s2.ax1x.com/2019/12/27/lV9ohd.md.png)](https://imgchr.com/i/lV9ohd)
+[![lV979A.md.png](https://s2.ax1x.com/2019/12/27/lV979A.md.png)](https://imgchr.com/i/lV979A)
+[![lV9H1I.md.png](https://s2.ax1x.com/2019/12/27/lV9H1I.md.png)](https://imgchr.com/i/lV9H1I)
+[![lV9bct.md.png](https://s2.ax1x.com/2019/12/27/lV9bct.md.png)](https://imgchr.com/i/lV9bct)
+[![lV9qjP.md.png](https://s2.ax1x.com/2019/12/27/lV9qjP.md.png)](https://imgchr.com/i/lV9qjP)
+[![lV9XB8.md.png](https://s2.ax1x.com/2019/12/27/lV9XB8.md.png)](https://imgchr.com/i/lV9XB8)
+[![lV9jHS.md.png](https://s2.ax1x.com/2019/12/27/lV9jHS.md.png)](https://imgchr.com/i/lV9jHS)
+[![lV9xAg.md.png](https://s2.ax1x.com/2019/12/27/lV9xAg.md.png)](https://imgchr.com/i/lV9xAg)
+[![lV9zNQ.md.png](https://s2.ax1x.com/2019/12/27/lV9zNQ.md.png)](https://imgchr.com/i/lV9zNQ)
+[![lVCShj.md.png](https://s2.ax1x.com/2019/12/27/lVCShj.md.png)](https://imgchr.com/i/lVCShj)
+[![lVC99s.md.png](https://s2.ax1x.com/2019/12/27/lVC99s.md.png)](https://imgchr.com/i/lVC99s)
+[![lVCC3n.md.png](https://s2.ax1x.com/2019/12/27/lVCC3n.md.png)](https://imgchr.com/i/lVCC3n)
+[![lVCij0.md.png](https://s2.ax1x.com/2019/12/27/lVCij0.md.png)](https://imgchr.com/i/lVCij0)
+[![lVCABT.md.png](https://s2.ax1x.com/2019/12/27/lVCABT.md.png)](https://imgchr.com/i/lVCABT)
+[![lVCEHU.md.png](https://s2.ax1x.com/2019/12/27/lVCEHU.md.png)](https://imgchr.com/i/lVCEHU)
 
