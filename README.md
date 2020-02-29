@@ -6,6 +6,8 @@
 
 软件荣誉课大一上大项目
 
+[文档请移步这里](https://letian.website/guojitiaoqiai)
+
 ## 答辩详情
 
 [![lV9ItH.md.png](https://s2.ax1x.com/2019/12/27/lV9ItH.md.png)](https://imgchr.com/i/lV9ItH)
