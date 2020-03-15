@@ -117,19 +117,26 @@ void Debug(const CHESS chessboard[])
 
 /*
 Parameters used to evaluate fuction*/
-const int kEvaluateNumber = 15;
-const int kEvaluateType = 16;
+const int kEvaluateMyChess = 221;
+const int kEvaluateMyKing = 125;
+const int kEvaluateEnemyChess = 180;
+const int kEvaluateEnemyKing = 157;
+const int kEvaluateMyThreat = 105;
+const int kEvaluateEnemyThreat = 101;
+const int kEvaluateSide = 20;
+const int kEvaluateKingSide = 50;
 /*
 Constants used to generate moving method*/
 const CHESS kCutMove[2][2] = {{0xefefefe0, 0x0fefefef}, {0xf7f7f7f0, 0x07f7f7f7}};
 const CHESS kCutJump[2][2] = {{0xeeeeee00, 0x00eeeeee}, {0x77777700, 0x00777777}};
+const CHESS kCutEdge = 0xf818181f;
 const CHESS kKing[2] = {0xf0000000, 0x0000000f};
 const CHESS kEven = 0x0f0f0f0f;
 /*
 Variables used to control running time*/
 long long clock_start;
 long long clock_end;
-const long long time_limit = 1600;
+const long long time_limit = 1650;
 /*
 This array is used to save the output result.*/
 CHESS output[150][3];
@@ -184,6 +191,13 @@ int Count(CHESS chessboard)
     chessboard = ((chessboard >> 4) & 0x0f0f0f0f) + (chessboard & 0x0f0f0f0f);
     chessboard = ((chessboard >> 8) & 0x00ff00ff) + (chessboard & 0x00ff00ff);
     return (chessboard >> 16) + (chessboard & 0x0000ffff);
+}
+
+void CopyChessboard(CHESS to[], CHESS from[])
+{
+    to[WHITE] = from[WHITE];
+    to[BLACK] = from[BLACK];
+    to[KING] = from[KING];
 }
 
 CHESS Move(const CHESS position, const int horizontal, const int vertical)
@@ -406,8 +420,10 @@ void Input(CHESS chessboard[])
 int Evaluate(const CHESS chessboard[], const int side)
 {
     int value = 0;
-    value += Count(chessboard[side]) << kEvaluateNumber;
-    value += Count(chessboard[side] & chessboard[KING]) << kEvaluateType;
+    value += Count(chessboard[side]) * kEvaluateMyChess;
+    value += Count(chessboard[side] & chessboard[KING]) * kEvaluateMyKing;
+    value += Count(chessboard[side] & kCutEdge) * kEvaluateSide;
+    value += Count(chessboard[side] & chessboard[KING] & kCutEdge) * kEvaluateKingSide;
     return value;
 }
 
@@ -473,13 +489,6 @@ int HashPush(const CHESS chessboard[], const CHESS expect[], const int side)
     return hash_index;
 }
 
-void CopyChessboard(CHESS to[], CHESS from[])
-{
-    to[WHITE] = from[WHITE];
-    to[BLACK] = from[BLACK];
-    to[KING] = from[KING];
-}
-
 int AlphaBeta(const int level, const int depth, int alpha, int beta,
               const CHESS chessboard[], const int side, EXPECT *father)
 {
@@ -492,9 +501,7 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
         return (Count(chessboard[side]) - Count(chessboard[side ^ 1]) + ((Count(chessboard[side] & chessboard[KING]) - Count(chessboard[side ^ 1] & chessboard[KING])) << 1)) > 0 ? INFINITY : -INFINITY;
     node_count++;
     EXPECT expect;
-    int pvs = 0;
-    int start = method_index + 1;
-    int end = start;
+    int pvs = 0, start = method_index + 1, end = start;
     int pos = HashFind(chessboard, side);
     HASH *node = &hash[pos];
     int flag = FindPossibleJump(chessboard, side);
@@ -509,9 +516,9 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta,
     if (flag)
     {
         end = method_index;
-        /*for (int i = start; i <= end; i++)
+        for (int i = start; i <= end; i++)
             method[i].value = Evaluate(method[i].chessboard, side) - Evaluate(method[i].chessboard, side ^ 1);
-        MethodSort(start, end);*/
+        MethodSort(start, end);
     }
     else
         return -INFINITY;
@@ -590,7 +597,7 @@ void Search(CHESS chessboard[], const int side)
     time_out = 0;
     former_value = -INFINITY - 1;
     int depth;
-    for (depth = 1; (turn + depth <= 120) && !time_out && depth <= 15; depth++)
+    for (depth = 1; (turn + depth <= 120) && !time_out; depth++)
     {
         node_count = 0;
         EXPECT expect;
