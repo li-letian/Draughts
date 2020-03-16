@@ -23,7 +23,7 @@ Some other good mods:
 12255871 16341163 21788233*/
 #define MOD 1226959
 /*
-Make the rules of the chessboard side index as follows.*/
+Make the rules of the chessboard index as follows.*/
 #define WHITE 0
 #define BLACK 1
 #define KING 2
@@ -209,7 +209,7 @@ int Count(CHESS chessboard)
 
 /*
 Copy the from chessboard to the to chessboard.*/
-void CopyChessboard(CHESS to[], const CHESS from[])
+void CopyChessboard(CHESS to[], CHESS from[])
 {
     to[WHITE] = from[WHITE];
     to[BLACK] = from[BLACK];
@@ -295,10 +295,10 @@ int FindPossibleJump(const CHESS chessboard[], const int side)
     while (queue_head <= queue_tail)
     {
         QueuePop(&state, &bridge, &position);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ LEFTWARD, side ^ FORWARD);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ RIGHTWARD, side ^ FORWARD);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ LEFTWARD, side ^ BACKWARD);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ RIGHTWARD, side ^ BACKWARD);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ 1, side ^ 1);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side, side ^ 1);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ 1, side);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side, side);
     }
     if (!queue[queue_tail][ENEMY])
         return 0;
@@ -347,16 +347,16 @@ int FindPossibleMove(const CHESS chessboard[], const int side)
     while (generate)
     {
         CHESS position = generate & ((~generate) + 1);
-        OneDirectionMove(chessboard, position, side, side ^ LEFTWARD, side ^ FORWARD);
-        OneDirectionMove(chessboard, position, side, side ^ RIGHTWARD, side ^ FORWARD);
+        OneDirectionMove(chessboard, position, side, side ^ 1, side ^ 1);
+        OneDirectionMove(chessboard, position, side, side, side ^ 1);
         generate ^= position;
     }
     generate = chessboard[side] & chessboard[KING];
     while (generate)
     {
         CHESS position = generate & ((~generate) + 1);
-        OneDirectionMove(chessboard, position, side, side ^ LEFTWARD, side ^ BACKWARD);
-        OneDirectionMove(chessboard, position, side, side ^ RIGHTWARD, side ^ BACKWARD);
+        OneDirectionMove(chessboard, position, side, side ^ 1, side);
+        OneDirectionMove(chessboard, position, side, side, side);
         generate ^= position;
     }
     return method_index - start;
@@ -414,16 +414,19 @@ void Output(const CHESS chessboard[], int side)
         CHESS position = chessboard[side] & temp;
         while (bridge)
         {
-            OneDirectionOutput(&position, &bridge, OUTSIDE, UP);
-            OneDirectionOutput(&position, &bridge, INSIDE, UP);
-            OneDirectionOutput(&position, &bridge, OUTSIDE, DOWN);
-            OneDirectionOutput(&position, &bridge, INSIDE, DOWN);
+            OneDirectionOutput(&position, &bridge, 1, 0);
+            OneDirectionOutput(&position, &bridge, 1, 1);
+            OneDirectionOutput(&position, &bridge, 0, 1);
+            OneDirectionOutput(&position, &bridge, 0, 0);
         }
         printf("\n");
+        fflush(stdout);
     }
     else
+    {
         printf("%d %d,%d %d,%d\n", cnt, start >> 3, start & 7, end >> 3, end & 7);
-    fflush(stdout);
+        fflush(stdout);
+    }
     return;
 }
 
@@ -453,7 +456,9 @@ void Input(CHESS chessboard[])
             chessboard[KING] ^= chessboard[KING] & CoordinateToChess(row, col);
         }
     }
-    CopyChessboard(output[turn], chessboard);
+    output[turn][WHITE] = chessboard[WHITE];
+    output[turn][BLACK] = chessboard[BLACK];
+    output[turn][KING] = chessboard[KING];
 }
 
 /*
@@ -527,25 +532,15 @@ int HashPush(const CHESS chessboard[], const CHESS expect[], const int side)
     int pos = Hash(chessboard);
     ++hash_index;
     HASH *node = &hash[hash_index];
-    CopyChessboard(node->chessboard, chessboard);
-    CopyChessboard(node->expect, expect);
+    node->chessboard[WHITE] = chessboard[WHITE];
+    node->chessboard[BLACK] = chessboard[BLACK];
+    node->chessboard[KING] = chessboard[KING];
+    node->expect[WHITE] = expect[WHITE];
+    node->expect[BLACK] = expect[BLACK];
+    node->expect[KING] = expect[KING];
     node->next = hash_head[side][pos];
     hash_head[side][pos] = hash_index;
     return hash_index;
-}
-
-/*
-Judge whether the time is about to running out.if it is,clear the method table to the start position.*/
-int TimeControl(int start)
-{
-    clock_end = clock();
-    if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
-    {
-        time_out = 1;
-        method_index = start - 1;
-        return 1;
-    }
-    return 0;
 }
 
 /*
@@ -560,7 +555,8 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
     if (turn + depth >= 120) /*Run out of steps situation.*/
         return (Count(chessboard[side]) - Count(chessboard[side ^ 1]) + ((Count(chessboard[side] & chessboard[KING]) - Count(chessboard[side ^ 1] & chessboard[KING])) << 1)) > 0 ? INFINITY : -INFINITY;
     EXPECT expect;
-    int pvs = 0, start = method_index + 1, end = start, pos = HashFind(chessboard, side);
+    int pvs = 0, start = method_index + 1, end = start;
+    int pos = HashFind(chessboard, side);
     HASH *node = &hash[pos];
     int flag = FindPossibleJump(chessboard, side);
     if (!flag) /*No jump situation.*/
@@ -597,10 +593,15 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
             if (!depth && former_value <= alpha)
                 CopyChessboard(output[turn], node->expect);
         }
-        if (TimeControl(start))
+        clock_end = clock();
+        if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
+        {
+            time_out = 1;
+            method_index = start - 1;
             return alpha;
+        }
     }
-    for (int i = start; i <= end; i++)
+    for (int i = start; i <= end; i++) /*search all the method*/
     {
         int temp = key[i], value;
         if (temp && method[temp].chessboard[WHITE] == node->expect[WHITE] && method[temp].chessboard[BLACK] == node->expect[BLACK] && method[temp].chessboard[KING] == node->expect[KING])
@@ -630,8 +631,13 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
             if (!depth && former_value <= alpha)
                 CopyChessboard(output[turn], method[temp].chessboard);
         }
-        if (TimeControl(start))
+        clock_end = clock();
+        if ((long long)clock_end - (long long)clock_start >= (long long)time_limit)
+        {
+            time_out = 1;
+            method_index = start - 1;
             return alpha;
+        }
     }
     method_index = start - 1;
     return alpha;
@@ -642,7 +648,7 @@ Iterative deepening search fuction.*/
 void Search(CHESS chessboard[], const int side)
 {
     time_out = 0;
-    time_limit = turn <= 60 ? 1800 : 3000 - 20 * turn;
+    time_limit = turn <= 80 ? 1650 : 3570 - 23 * turn;
     former_value = -INFINITY - 1;
     int depth;
     for (depth = 1; (turn + depth <= 120) && !time_out; depth++)
@@ -707,6 +713,7 @@ void Work(void)
             {
                 Debug(chessboard);
                 printf("DEBUG time:%lld\n", clock_end - clock_start);
+                fflush(stdout);
                 printf("DEBUG hashlist:%d\n", hash_index);
                 fflush(stdout);
             }
@@ -717,7 +724,9 @@ void Work(void)
             Input(chessboard);
             turn++;
             if (DEBUG)
+            {
                 Debug(chessboard);
+            }
             continue;
         }
         if (order[0] == 'E')
