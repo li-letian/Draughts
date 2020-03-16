@@ -23,7 +23,7 @@ Some other good mods:
 12255871 16341163 21788233*/
 #define MOD 1226959
 /*
-Make the rules of the chessboard index as follows.*/
+Make the rules of the chessboard side index as follows.*/
 #define WHITE 0
 #define BLACK 1
 #define KING 2
@@ -33,6 +33,13 @@ Make the rules of the absolute direction as follows.*/
 #define DOWN 0
 #define OUTSIDE 1
 #define INSIDE 0
+
+/*
+Make the rules of the relative direction as follows.*/
+#define FORWARD 1
+#define BACKWARD 0
+#define LEFTWARD 1
+#define RIGHTWARD 0
 /*
 Make the rules of the BFS queue index as follows.*/
 #define MINE 0
@@ -40,6 +47,7 @@ Make the rules of the BFS queue index as follows.*/
 #define POSITION 2
 
 /*
+Easily we know that <absolute direction>=<relative direction>^<side>.
 Suppose that the chessboard in this program looks like this.
 ,,,,,,,,,,,,,,,,,,
 | 0 x 0 x 0 x 0 x|7
@@ -201,7 +209,7 @@ int Count(CHESS chessboard)
 
 /*
 Copy the from chessboard to the to chessboard.*/
-void CopyChessboard(CHESS to[], CHESS from[])
+void CopyChessboard(CHESS to[], const CHESS from[])
 {
     to[WHITE] = from[WHITE];
     to[BLACK] = from[BLACK];
@@ -287,10 +295,10 @@ int FindPossibleJump(const CHESS chessboard[], const int side)
     while (queue_head <= queue_tail)
     {
         QueuePop(&state, &bridge, &position);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ 1, side ^ 1);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side, side ^ 1);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ 1, side);
-        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side, side);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ LEFTWARD, side ^ FORWARD);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ RIGHTWARD, side ^ FORWARD);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ LEFTWARD, side ^ BACKWARD);
+        OneDirectionJump(chessboard[side ^ 1], state, bridge, position, side ^ RIGHTWARD, side ^ BACKWARD);
     }
     if (!queue[queue_tail][ENEMY])
         return 0;
@@ -339,21 +347,23 @@ int FindPossibleMove(const CHESS chessboard[], const int side)
     while (generate)
     {
         CHESS position = generate & ((~generate) + 1);
-        OneDirectionMove(chessboard, position, side, side ^ 1, side ^ 1);
-        OneDirectionMove(chessboard, position, side, side, side ^ 1);
+        OneDirectionMove(chessboard, position, side, side ^ LEFTWARD, side ^ FORWARD);
+        OneDirectionMove(chessboard, position, side, side ^ RIGHTWARD, side ^ FORWARD);
         generate ^= position;
     }
     generate = chessboard[side] & chessboard[KING];
     while (generate)
     {
         CHESS position = generate & ((~generate) + 1);
-        OneDirectionMove(chessboard, position, side, side ^ 1, side);
-        OneDirectionMove(chessboard, position, side, side, side);
+        OneDirectionMove(chessboard, position, side, side ^ LEFTWARD, side ^ BACKWARD);
+        OneDirectionMove(chessboard, position, side, side ^ RIGHTWARD, side ^ BACKWARD);
         generate ^= position;
     }
     return method_index - start;
 }
 
+/*
+Transform a single chess chessboard into the coordinate of the chess.*/
 int ChessToCoordinate(const CHESS state)
 {
     int temp = 0;
@@ -362,11 +372,15 @@ int ChessToCoordinate(const CHESS state)
     return (temp << 1) + !(((temp >> 2) & 1));
 }
 
+/*
+Transform a coordinate into a chessboard.*/
 CHESS CoordinateToChess(const int x, const int y)
 {
     return (1 << ((y << 2) | (x >> 1)));
 }
 
+/*
+Check out a possible jump path in one position to one direction.*/
 void OneDirectionOutput(CHESS *position, CHESS *bridge, const int horizontal, const int vertical)
 {
     if (!(((*position) & kCutMove[horizontal][vertical]) && ((*position) & kCutJump[horizontal][vertical])))
@@ -384,6 +398,8 @@ void OneDirectionOutput(CHESS *position, CHESS *bridge, const int horizontal, co
     return;
 }
 
+/*
+Output the jump path.*/
 void Output(const CHESS chessboard[], int side)
 {
     int cnt = 2;
@@ -398,22 +414,21 @@ void Output(const CHESS chessboard[], int side)
         CHESS position = chessboard[side] & temp;
         while (bridge)
         {
-            OneDirectionOutput(&position, &bridge, 1, 0);
-            OneDirectionOutput(&position, &bridge, 1, 1);
-            OneDirectionOutput(&position, &bridge, 0, 1);
-            OneDirectionOutput(&position, &bridge, 0, 0);
+            OneDirectionOutput(&position, &bridge, OUTSIDE, UP);
+            OneDirectionOutput(&position, &bridge, INSIDE, UP);
+            OneDirectionOutput(&position, &bridge, OUTSIDE, DOWN);
+            OneDirectionOutput(&position, &bridge, INSIDE, DOWN);
         }
         printf("\n");
-        fflush(stdout);
     }
     else
-    {
         printf("%d %d,%d %d,%d\n", cnt, start >> 3, start & 7, end >> 3, end & 7);
-        fflush(stdout);
-    }
+    fflush(stdout);
     return;
 }
 
+/*
+Input what the enemy moves and update the present chessboard.*/
 void Input(CHESS chessboard[])
 {
     int number;
@@ -438,11 +453,11 @@ void Input(CHESS chessboard[])
             chessboard[KING] ^= chessboard[KING] & CoordinateToChess(row, col);
         }
     }
-    output[turn][WHITE] = chessboard[WHITE];
-    output[turn][BLACK] = chessboard[BLACK];
-    output[turn][KING] = chessboard[KING];
+    CopyChessboard(output[turn], chessboard);
 }
 
+/*
+Evaluate how good the present chessboard is.*/
 int Evaluate(const CHESS chessboard[], const int side)
 {
     int value = 0;
@@ -453,6 +468,8 @@ int Evaluate(const CHESS chessboard[], const int side)
     return value;
 }
 
+/*
+Sort the method.*/
 void MethodSort(const int start, const int end)
 {
     int i = start;
@@ -480,11 +497,15 @@ void MethodSort(const int start, const int end)
     return;
 }
 
+/*
+Hash the chessboard and return its hash.*/
 int Hash(const CHESS chessboard[])
 {
     return ((chessboard[WHITE] >> 3) ^ chessboard[KING] ^ (chessboard[BLACK] << 3)) % MOD;
 }
 
+/*
+Find the chesssboard method and return the accurate index in the hash chain table.*/
 int HashFind(const CHESS chessboard[], int side)
 {
     int pos = Hash(chessboard);
@@ -499,22 +520,22 @@ int HashFind(const CHESS chessboard[], int side)
     return 0;
 }
 
+/*
+Push a node into the hash table.*/
 int HashPush(const CHESS chessboard[], const CHESS expect[], const int side)
 {
     int pos = Hash(chessboard);
     ++hash_index;
     HASH *node = &hash[hash_index];
-    node->chessboard[WHITE] = chessboard[WHITE];
-    node->chessboard[BLACK] = chessboard[BLACK];
-    node->chessboard[KING] = chessboard[KING];
-    node->expect[WHITE] = expect[WHITE];
-    node->expect[BLACK] = expect[BLACK];
-    node->expect[KING] = expect[KING];
+    CopyChessboard(node->chessboard, chessboard);
+    CopyChessboard(node->expect, expect);
     node->next = hash_head[side][pos];
     hash_head[side][pos] = hash_index;
     return hash_index;
 }
 
+/*
+Judge whether the time is about to running out.if it is,clear the method table to the start position.*/
 int TimeControl(int start)
 {
     clock_end = clock();
@@ -527,35 +548,37 @@ int TimeControl(int start)
     return 0;
 }
 
+/*
+MinMax search AlphaBeta cut function.*/
 int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS chessboard[], const int side, EXPECT *father)
 {
     father->size = 0;
-    if (!chessboard[side])
+    if (!chessboard[side]) /*Total lose situation.*/
         return -INFINITY;
-    if (!chessboard[side ^ 1])
+    if (!chessboard[side ^ 1]) /*Total win situation.*/
         return INFINITY;
-    if (turn + depth >= 120)
+    if (turn + depth >= 120) /*Run out of steps situation.*/
         return (Count(chessboard[side]) - Count(chessboard[side ^ 1]) + ((Count(chessboard[side] & chessboard[KING]) - Count(chessboard[side ^ 1] & chessboard[KING])) << 1)) > 0 ? INFINITY : -INFINITY;
     EXPECT expect;
     int pvs = 0, start = method_index + 1, end = start, pos = HashFind(chessboard, side);
     HASH *node = &hash[pos];
     int flag = FindPossibleJump(chessboard, side);
-    if (!flag)
+    if (!flag) /*No jump situation.*/
     {
-        if (depth >= level)
+        if (depth >= level) /*Out of the searching range situation.*/
             return Evaluate(chessboard, side) - Evaluate(chessboard, side ^ 1);
         flag = FindPossibleMove(chessboard, side);
     }
-    if (flag)
+    if (flag) /*Exist method to go situation.*/
     {
         end = method_index;
         for (int i = start; i <= end; i++)
             method[i].value = Evaluate(method[i].chessboard, side) - Evaluate(method[i].chessboard, side ^ 1);
         MethodSort(start, end);
     }
-    else
+    else /*No method to go situation.*/
         return -INFINITY;
-    if (pos)
+    if (pos) /*Exist the most expected method situation.*/
     {
         int value = -AlphaBeta(level, depth + 1, -beta, -alpha, node->expect, side ^ 1, &expect);
         if (value >= beta)
@@ -614,17 +637,19 @@ int AlphaBeta(const int level, const int depth, int alpha, int beta, const CHESS
     return alpha;
 }
 
+/*
+Iterative deepening search fuction.*/
 void Search(CHESS chessboard[], const int side)
 {
     time_out = 0;
-    time_limit = turn <= 80 ? 1650 : 3570 - 23 * turn;
+    time_limit = turn <= 60 ? 1800 : 3000 - 20 * turn;
     former_value = -INFINITY - 1;
     int depth;
     for (depth = 1; (turn + depth <= 120) && !time_out; depth++)
     {
         EXPECT expect;
         former_value = AlphaBeta(depth, 0, -INFINITY - 1, INFINITY + 1, chessboard, side, &expect);
-        if (former_value == INFINITY)
+        if (former_value == INFINITY) /*Already have good enough answer.*/
             break;
         if (DEBUG)
             printf("DEBUG level:%d expect:%d value:%d\n", depth, expect.size, former_value);
@@ -661,6 +686,8 @@ void Search(CHESS chessboard[], const int side)
     return;
 }
 
+/*
+Receive command and respond.*/
 void Work(void)
 {
     CHESS chessboard[3] = {0x00000fff, 0xfff00000, 0};
@@ -680,7 +707,6 @@ void Work(void)
             {
                 Debug(chessboard);
                 printf("DEBUG time:%lld\n", clock_end - clock_start);
-                fflush(stdout);
                 printf("DEBUG hashlist:%d\n", hash_index);
                 fflush(stdout);
             }
@@ -691,9 +717,7 @@ void Work(void)
             Input(chessboard);
             turn++;
             if (DEBUG)
-            {
                 Debug(chessboard);
-            }
             continue;
         }
         if (order[0] == 'E')
@@ -706,6 +730,8 @@ void Work(void)
     return;
 }
 
+/*
+main function.*/
 int main(void)
 {
     scanf("START %d", &my_side);
